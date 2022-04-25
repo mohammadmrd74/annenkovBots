@@ -3,7 +3,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, ElementClickInterceptedException
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from random_user_agent.user_agent import UserAgent
 from random_user_agent.params import SoftwareName, OperatingSystem
@@ -39,7 +39,7 @@ mycursor.execute("select * from annencov.links")
 links = mycursor.fetchall()
 
 for link in links:
-    if(link['brand'] == 'nike'):
+    if(link['brand'] == 'nike1'):
         caps["pageLoadStrategy"] = "eager"
         driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)  
         print("\n\n******** NIKE *********\n\n")
@@ -76,7 +76,7 @@ for link in links:
     
         driver.quit()
 
-    elif(link['brand'] == 'newbalance'):
+    elif(link['brand'] == 'newbalance1'):
         print("\n\n******** NEWBALANCE *********\n\n")
         caps["pageLoadStrategy"] = "eager"
         driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
@@ -118,7 +118,7 @@ for link in links:
 
         driver.quit()
     
-    elif(link['brand'] == 'reebok'):
+    elif(link['brand'] == 'reebok1'):
         print("\n\n******** REEBOK *********\n\n")
         caps["pageLoadStrategy"] = "eager"
         driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
@@ -162,47 +162,66 @@ for link in links:
         driver.quit()
 
     elif(link['brand'] == 'adidas'):
-        print("\n\n******** ADIADS *********\n\n")
-        caps["pageLoadStrategy"] = "normal"
-        options = Options()
-        options.headless = True
-        options.add_argument("--window-size=1920,1200")
-        options.add_argument('disable-blink-features=AutomationControlled')
-        options.add_argument(f'user-agent={user_agent}')
-        caps = DesiredCapabilities().CHROME
-        driver1 = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
-        driver1.get(link['link'])
+        print("\n\n******** ADIDAS *********\n\n")
+        caps["pageLoadStrategy"] = "eager"
+        driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
+        URL = link['link']
+        driver.get(URL)
+        try:
+            WebDriverWait(driver, 3).until(EC.alert_is_present(),
+                                        'Timed out waiting for PA creation ' +
+                                        'confirmation popup to appear.')
 
-        pics = []
-        time.sleep(15)
-        pics.append(driver1.find_element(By.XPATH, '//*[@id="navigation-target-gallery"]/section/div[1]/div[1]/div/div[1]/div/div/img').get_attribute('src'))
-        pics.append(driver1.find_element(By.XPATH, '//*[@id="navigation-target-gallery"]/section/div[1]/div[1]/div/div[2]/div/div/img').get_attribute('src'))
-        pics.append(driver1.find_element(By.XPATH, '//*[@id="navigation-target-gallery"]/section/div[1]/div[1]/div/div[3]/div/div/img').get_attribute('src'))
-        pics.append(driver1.find_element(By.XPATH, '//*[@id="navigation-target-gallery"]/section/div[1]/div[1]/div/div[4]/div/div/img').get_attribute('src'))
-        pics.append(driver1.find_element(By.XPATH, '//*[@id="navigation-target-gallery"]/section/div[1]/div[1]/div/div[5]/div/div/img').get_attribute('src'))
-        pics.append(driver1.find_element(By.XPATH, '//*[@id="navigation-target-gallery"]/section/div[1]/div[1]/div/div[6]/div/div/img').get_attribute('src'))
+            alert = driver.switch_to.alert
+            alert.dismiss()
+            print("alert dismissed")
+        except TimeoutException:
+            print("no alert")
+            try:
+                myElem = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.TAG_NAME, 'img')))
+                pics = []
+                # time.sleep(5)
+                pics.append(driver.find_element(By.XPATH, '//*[@id="navigation-target-gallery"]/section/div[1]/div[1]/div/div[1]/div/div/img').get_attribute('src'))
+                pics.append(driver.find_element(By.XPATH, '//*[@id="navigation-target-gallery"]/section/div[1]/div[1]/div/div[2]/div/div/img').get_attribute('src'))
+                pics.append(driver.find_element(By.XPATH, '//*[@id="navigation-target-gallery"]/section/div[1]/div[1]/div/div[3]/div/div/img').get_attribute('src'))
+                pics.append(driver.find_element(By.XPATH, '//*[@id="navigation-target-gallery"]/section/div[1]/div[1]/div/div[4]/div/div/img').get_attribute('src'))
+                pics.append(driver.find_element(By.XPATH, '//*[@id="navigation-target-gallery"]/section/div[1]/div[1]/div/div[5]/div/div/img').get_attribute('src'))
+                pics.append(driver.find_element(By.XPATH, '//*[@id="navigation-target-gallery"]/section/div[1]/div[1]/div/div[6]/div/div/img').get_attribute('src'))
+
+                for p in pics:
+                    print(p)
+
+                title = driver.find_element(By.XPATH, '//*[@id="app"]/div/div[1]/div/div/div/div[2]/div[2]/div[2]/div/h1/span').text
+                print(title)
+
+                price = driver.find_element(By.XPATH, '//*[@id="app"]/div/div[1]/div/div/div/div[2]/div[2]/div[2]/div/div[2]/div[1]/div/div/div').text
+                print(price)
+
+                # styleNum = link['link'].split('/')[-1]
+                # print(styleNum)
+
+                
+                try:
+                    myElem = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, 'size___TqqSo')))
+                    newSizes = driver.find_elements(By.CLASS_NAME, 'size___TqqSo')
+                    for size in newSizes:
+                        print(size.text)
+                except TimeoutException:
+                    time.sleep(5)
+                    print("wait again")
+                    newSizes = driver.find_elements(By.CLASS_NAME, 'size___TqqSo')
+                    for size in newSizes:
+                        print(size.text)
+
+
+
+            except TimeoutException:
+                print("Loading took too much time!")
+
+
+        driver.quit()
     
-        for p in pics:
-            print(p)
-
-        title = driver1.find_element(By.XPATH, '//*[@id="app"]/div/div[1]/div/div/div/div[2]/div[2]/div[2]/div/h1/span').text
-        print(title)
-
-        price = driver1.find_element(By.XPATH, '//*[@id="app"]/div/div[1]/div/div/div/div[2]/div[2]/div[2]/div/div[2]/div[1]/div/div/div').text
-        print(price)
-
-        styleNum = link['link'].split('/')[-1]
-        print(styleNum)
-
-        
-        newSizes = driver1.find_elements(By.CLASS_NAME, 'size___TqqSo')
-        for size in newSizes:
-            print(size.text)
-
-
-        driver1.quit()
-    
-    elif(link['brand'] == 'puma'):
+    elif(link['brand'] == 'puma1'):
         print("\n\n******** PUMA *********\n\n")
         caps["pageLoadStrategy"] = "eager"
         driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
@@ -242,7 +261,7 @@ for link in links:
 
         driver.quit()
     
-    elif(link['brand'] == 'asics'):
+    elif(link['brand'] == 'asics1'):
         print("\n\n******** ASICS *********\n\n")
         caps["pageLoadStrategy"] = "eager"
         driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
@@ -286,7 +305,7 @@ for link in links:
 
         driver.quit()
 
-    elif(link['brand'] == 'underarmour'):
+    elif(link['brand'] == 'underarmour1'):
         print("\n\n******** underarmour *********\n\n")
         caps["pageLoadStrategy"] = "eager"
         driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
@@ -331,7 +350,7 @@ for link in links:
 
         driver.quit()
 
-    elif(link['brand'] == 'northface'):
+    elif(link['brand'] == 'northface1'):
         print("\n\n******** northface *********\n\n")
         caps["pageLoadStrategy"] = "eager"
         driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
@@ -371,7 +390,7 @@ for link in links:
 
         driver.quit()
            
-    elif(link['brand'] == 'salomon'):
+    elif(link['brand'] == 'salomon1'):
         print("\n\n******** salomon *********\n\n")
         caps["pageLoadStrategy"] = "eager"
         driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
@@ -407,7 +426,7 @@ for link in links:
 
         driver.quit()
 
-    elif(link['brand'] == 'converse'):
+    elif(link['brand'] == 'converse1'):
         print("\n\n******** converse *********\n\n")
         caps["pageLoadStrategy"] = "eager"
         driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
@@ -431,7 +450,7 @@ for link in links:
             styleNum = driver.find_element(By.XPATH, '//*[@id="ProductPage"]/div[1]/div/div[2]/div[3]/div[2]/span').text
             print(styleNum)
 
-            newSizes = driver.find_elements(By.TAG_NAME, '//*[@id="ProductPage"]/div[1]/div/div[2]/div[5]/div[2]/select/option')
+            newSizes = driver.find_elements(By.XPATH, '//*[@id="ProductPage"]/div[1]/div/div[2]/div[5]/div[2]/select/option')
             for size in newSizes:
                 if(size.get_attribute('disabled') == None):
                     print(size.text)
@@ -448,36 +467,59 @@ for link in links:
         URL = link['link']
         driver.get(URL)
         try:
-            myElem = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'imgInner')))
-            time.sleep(3)
+            myElem = WebDriverWait(driver, 20).until(
+            EC.presence_of_all_elements_located((By.TAG_NAME, 'img')))
+            time.sleep(1)
+            # driver.get("https://www.mizunotr.com/wave-intense-tour-5-cc-tenis-ayakkabisi")
             picsImage = []
-            pics = driver.find_elements(By.CLASS_NAME, 'imgInner')
-            
+            pics = driver.find_elements(By.CLASS_NAME, 'image-wrapper')
+
             for p in pics:
-                pl = p.find_element(By.TAG_NAME, 'img').get_attribute('src')
-                if(pl.find("-K") == -1):
-                    picsImage.append(pl)
-        
+                if(p.find_element(By.TAG_NAME, 'img')):
+                    pl = p.find_element(By.TAG_NAME, 'img').get_attribute('src')
+                    if(pl.find("-K") == -1):
+                        picsImage.append(pl)
+
             print(picsImage)
 
             title = driver.find_element(By.XPATH, '//*[@id="productName"]').text
             print(title)
 
-            price = driver.find_element(By.XPATH, '//*[@id="price-flexer"]/div[2]/div/span').text
+            price = driver.find_element(
+                By.XPATH, '//*[@id="price-flexer"]/div[2]/div/span').text
             print(price)
 
-            styleNum = driver.find_element(By.XPATH, '//*[@id="supplier-question"]/div[1]/span').text
+            styleNum = driver.find_element(
+                By.XPATH, '//*[@id="supplier-question"]/div[1]/span').text
             print(styleNum)
 
+            try:
+                mainpic = driver.find_element(
+                By.XPATH, '//*[@id="mobileBuyBtn"]/div[1]/div[2]/div/div[1]/div')
 
-            mainpic = driver.find_element(By.XPATH, '//*[@id="mobileBuyBtn"]/div[1]/div[2]/div/div[1]/div')
+                mainpic.click()
+                time.sleep(2)
 
-            mainpic.click()
-            time.sleep(1)
-            
-            newSizes = driver.find_elements(By.XPATH, '//*[@id="mobileBuyBtn"]/div[1]/div[2]/div/div[1]/div/div[1]/a')
-            for size in newSizes:
-                print(size.text)
+                newSizes = driver.find_elements(
+                    By.XPATH, '//*[@id="mobileBuyBtn"]/div[1]/div[2]/div/div[1]/div/div[1]/a')
+                for size in newSizes:
+                    print(size.text)
+            except ElementClickInterceptedException:
+                print("Exepted")
+                time.sleep(2)
+                mainpic = driver.find_element(
+                By.XPATH, '//*[@id="mobileBuyBtn"]/div[1]/div[2]/div/div[1]/div')
+
+                mainpic.click()
+
+                time.sleep(2)
+                newSizes = driver.find_elements(
+                    By.XPATH, '//*[@id="mobileBuyBtn"]/div[1]/div[2]/div/div[1]/div/div[1]/a')
+                for size in newSizes:
+                    print(size.text)
+                
+
+
         except TimeoutException:
             print("Loading took too much time!")
 
@@ -568,6 +610,80 @@ for link in links:
             for size in newSizes:
                 if(size.text):
                     print(size.text)
+        except TimeoutException:
+            print("Loading took too much time!")
+
+
+        driver.quit()
+
+    elif(link['brand'] == 'columbia'):
+        print("\n\n******** columbia *********\n\n")
+        caps["pageLoadStrategy"] = "eager"
+        driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
+        URL = link['link']
+        driver.get(URL)
+        try:
+            myElem = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'MuiIconButton-label')))
+            time.sleep(2)
+            
+
+            title = driver.find_element(By.XPATH, '/html/body/div[2]/main/div/div[1]/div[2]/div/div[2]/div/div[1]/div[1]/div[1]/h1').text
+            print(title)
+
+            price = driver.find_element(By.XPATH, '//*[@id="__next"]/main/div/div[1]/div[2]/div/div[2]/div/div[1]/div[2]/div/span').text
+            print(price)
+
+            styleNum = driver.find_element(By.XPATH, '//*[@id="panel3bh-header"]/div[1]/div/div[2]/p')
+
+            print(styleNum.text)
+
+
+            sizeEl = driver.find_elements(By.CLASS_NAME, 'MuiTypography-caption')
+            for size in sizeEl:
+                if(size.get_attribute("data-testid") == "select-size"):
+                    print(size.text)
+
+            picsImage = []
+            pics = driver.find_elements(By.TAG_NAME, 'picture')
+        
+            for p in pics:
+                img = p.find_element(By.TAG_NAME, 'img')
+                picsImage.append(img.get_attribute("src"))
+        
+            print(picsImage)
+        except TimeoutException:
+            print("Loading took too much time!")
+
+
+        driver.quit()
+
+    elif(link['brand'] == 'timberland'):
+        print("\n\n******** timberland *********\n\n")
+        caps["pageLoadStrategy"] = "eager"
+        driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
+        URL = link['link']
+        driver.get(URL)
+        try:
+            myElem = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'img-item')))
+            title = driver.find_element(By.XPATH, '//*[@id="product"]/div[3]/div[2]/div/div[1]/h1').text
+            print(title)
+
+            price = driver.find_element(By.XPATH, '//*[@id="product"]/div[3]/div[2]/div/div[1]/div/span').text
+            print(price)
+            sizeEl = driver.find_elements(By.XPATH, '//*[@id="frm-addbasket"]/div[3]/div[2]/div/div[2]/ul/li')
+            
+            for size in sizeEl:
+                print(size.text)
+
+            picsImage = []
+            pics = driver.find_elements(By.CLASS_NAME, 'img-item')
+        
+            for p in pics:
+                img = p.find_element(By.TAG_NAME, 'img')
+                print(p.get_attribute("innerHTML"))
+                picsImage.append(img.get_attribute("src"))
+        
+            print(picsImage)
         except TimeoutException:
             print("Loading took too much time!")
 
