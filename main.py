@@ -9,6 +9,9 @@ from random_user_agent.user_agent import UserAgent
 from random_user_agent.params import SoftwareName, OperatingSystem
 import time
 import mysql.connector
+import requests
+from bs4 import BeautifulSoup
+import json
 
 software_names = [SoftwareName.CHROME.value]
 operating_systems = [OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value]   
@@ -23,7 +26,6 @@ options.add_argument(f'user-agent={user_agent}')
 caps = DesiredCapabilities().CHROME
 
 
-user_agent = user_agent_rotator.get_random_user_agent()
 
 
 mydb = mysql.connector.connect(
@@ -40,41 +42,40 @@ links = mycursor.fetchall()
 
 for link in links:
     if(link['brand'] == 'nike1'):
-        caps["pageLoadStrategy"] = "eager"
-        driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)  
-        print("\n\n******** NIKE *********\n\n")
+        headers = {
+        'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
+        'Cookie': '',
+        'origin': 'https://www.nike.com'
+        }
+
+        s = requests.Session()
         URL = link['link']
+        page = s.get(URL)
+        soup = BeautifulSoup(page.content, "html.parser")
+        # print(soup)
+        scripts = soup.find_all("script")
+        details = ''
+        for script in scripts:
+            if(script.text.find("INITIAL_REDUX_STATE") != -1):
+                details = script.text
         styleNum = URL.split('/')[-1]
+        details = details.replace('window.INITIAL_REDUX_STATE=', '')
+        details = details[0:-1]
+        jsonDetails = json.loads(details)
+        images = jsonDetails['Threads']['products'][styleNum]['nodes'][0]['nodes']
+        mappedImages = list(map(lambda x: x["properties"]['squarishURL'].replace('t_default', 't_PDP_1280_v1/f_auto,q_auto:eco'), images))
+        price = jsonDetails['Threads']['products'][styleNum]['currentPrice']
+        allSizes = jsonDetails['Threads']['products'][styleNum]['skus']
+        availableSizes = jsonDetails['Threads']['products'][styleNum]['availableSkus']
+        availableSizesInNumber = []
+        for size in allSizes:
+            for asize in availableSizes:
+                if(size['skuId'] == asize['id']):
+                    availableSizesInNumber.append(size['localizedSize'])
         print(styleNum)
-        driver.get(URL)
-        try:
-            myElem = WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.XPATH, '//*[@id="pdp-6-up"]/button[3]/div/picture[2]/img')))
-            pics = []
-            picsSrc = []
-            pics.append(driver.find_element(By.XPATH, '//*[@id="pdp-6-up"]/button[1]/div/picture[2]/img'))
-            pics.append(driver.find_element(By.XPATH, '//*[@id="pdp-6-up"]/button[2]/div/picture[2]/img'))
-            pics.append(driver.find_element(By.XPATH, '//*[@id="pdp-6-up"]/button[3]/div/picture[2]/img'))
-            pics.append(driver.find_element(By.XPATH, '//*[@id="pdp-6-up"]/button[4]/div/picture[2]/img'))
-            # print(pics)
-            for el in pics:
-                picsSrc.append(el.get_attribute('src'))
-                
-
-            print(picsSrc)
-            titled = driver.find_element(By.XPATH, '//*[@id="RightRail"]/div/div[1]/div/div[2]/div/h1').text
-            print(titled)
-
-            sizes = driver.find_elements(By.CLASS_NAME, 'css-xf3ahq')
-            for size in sizes:
-                print(size.text)
-
-            price = driver.find_element(By.XPATH, '//*[@id="RightRail"]/div/div[1]/div/div[2]/div/div/div/div/div').text
-            print(price)
-        except TimeoutException:
-            print("Loading took too much time!")
-
-    
-        driver.quit()
+        print(price)
+        print(availableSizesInNumber)
+        print(mappedImages)
 
     elif(link['brand'] == 'newbalance1'):
         print("\n\n******** NEWBALANCE *********\n\n")
@@ -163,63 +164,20 @@ for link in links:
 
     elif(link['brand'] == 'adidas'):
         print("\n\n******** ADIDAS *********\n\n")
-        caps["pageLoadStrategy"] = "eager"
-        driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
+        adiheaders = {
+          'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'
+        }
         URL = link['link']
-        driver.get(URL)
-        try:
-            WebDriverWait(driver, 3).until(EC.alert_is_present(),
-                                        'Timed out waiting for PA creation ' +
-                                        'confirmation popup to appear.')
-
-            alert = driver.switch_to.alert
-            alert.dismiss()
-            print("alert dismissed")
-        except TimeoutException:
-            print("no alert")
-            try:
-                myElem = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.TAG_NAME, 'img')))
-                pics = []
-                # time.sleep(5)
-                pics.append(driver.find_element(By.XPATH, '//*[@id="navigation-target-gallery"]/section/div[1]/div[1]/div/div[1]/div/div/img').get_attribute('src'))
-                pics.append(driver.find_element(By.XPATH, '//*[@id="navigation-target-gallery"]/section/div[1]/div[1]/div/div[2]/div/div/img').get_attribute('src'))
-                pics.append(driver.find_element(By.XPATH, '//*[@id="navigation-target-gallery"]/section/div[1]/div[1]/div/div[3]/div/div/img').get_attribute('src'))
-                pics.append(driver.find_element(By.XPATH, '//*[@id="navigation-target-gallery"]/section/div[1]/div[1]/div/div[4]/div/div/img').get_attribute('src'))
-                pics.append(driver.find_element(By.XPATH, '//*[@id="navigation-target-gallery"]/section/div[1]/div[1]/div/div[5]/div/div/img').get_attribute('src'))
-                pics.append(driver.find_element(By.XPATH, '//*[@id="navigation-target-gallery"]/section/div[1]/div[1]/div/div[6]/div/div/img').get_attribute('src'))
-
-                for p in pics:
-                    print(p)
-
-                title = driver.find_element(By.XPATH, '//*[@id="app"]/div/div[1]/div/div/div/div[2]/div[2]/div[2]/div/h1/span').text
-                print(title)
-
-                price = driver.find_element(By.XPATH, '//*[@id="app"]/div/div[1]/div/div/div/div[2]/div[2]/div[2]/div/div[2]/div[1]/div/div/div').text
-                print(price)
-
-                # styleNum = link['link'].split('/')[-1]
-                # print(styleNum)
-
-                
-                try:
-                    myElem = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, 'size___TqqSo')))
-                    newSizes = driver.find_elements(By.CLASS_NAME, 'size___TqqSo')
-                    for size in newSizes:
-                        print(size.text)
-                except TimeoutException:
-                    time.sleep(5)
-                    print("wait again")
-                    newSizes = driver.find_elements(By.CLASS_NAME, 'size___TqqSo')
-                    for size in newSizes:
-                        print(size.text)
-
-
-
-            except TimeoutException:
-                print("Loading took too much time!")
-
-
-        driver.quit()
+        page = requests.get(URL, headers=adiheaders)
+        soup = BeautifulSoup(page.content, "html.parser")
+        script = soup.find_all("script")
+        details = json.loads(script[0].text)
+        print(details["image"])
+        print(details["name"])
+        sizes = requests.get("https://www.adidas.com.tr/api/products/EE6999/availability?sitePath=en", headers=headers)
+        filtered = list(filter(lambda var: var["availability_status"] == "IN_STOCK", sizes.json()["variation_list"]))
+        mappedSizes = list(map(lambda x: x["size"], filtered))
+        print(mappedSizes)
     
     elif(link['brand'] == 'puma1'):
         print("\n\n******** PUMA *********\n\n")
