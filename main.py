@@ -1,166 +1,196 @@
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, ElementClickInterceptedException
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-from random_user_agent.user_agent import UserAgent
-from random_user_agent.params import SoftwareName, OperatingSystem
-import time
+from multiprocessing.pool import ThreadPool
+import re
 import mysql.connector
 import requests
 from bs4 import BeautifulSoup
 import json
+import time
+import threading
+sem = threading.Semaphore()
 
-software_names = [SoftwareName.CHROME.value]
-operating_systems = [OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value]   
-user_agent_rotator = UserAgent(software_names=software_names, operating_systems=operating_systems, limit=100)
-user_agent = user_agent_rotator.get_random_user_agent()
-DRIVER_PATH = '/home/mohammad/Downloads/chromedriver_linux64/chromedriver'
-options = Options()
-options.headless = True
-options.add_argument("--window-size=1920,1200")
-options.add_argument('disable-blink-features=AutomationControlled')
-options.add_argument(f'user-agent={user_agent}')
-caps = DesiredCapabilities().CHROME
+def chunks(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
 
+def extractPrice(price, sep='.'):
+  r = re.compile(r'(\d[\d.,]*)\b')
+  if(sep == ','):
+    extPrice = [x for x in re.findall(r, price)][0]
+    if(extPrice.find('.') != -1):
+      extPrice = int(extPrice.split('.')[0]) + 1
+  else:
+    extPrice = [x.replace('.', '') for x in re.findall(r, price)][0]
+    if(extPrice.find(',') != -1):
+      extPrice = int(extPrice.split(',')[0]) + 1
+  
+  return extPrice
 
+def insertIntoDb(link, title, price, totalPrice, styleNum, availableSizesInNumber, mappedImages):
+    sem.acquire()
+    try:
+        mycursor.execute("SELECT id from brands where brandName = %s", [link['brand']])
+        brandId = mycursor.fetchall()
+        sql = "INSERT INTO products (title, price, totalPrice, styleNumber, currencyId, brandId, mainAndCategoryId, typeId, linkId, colorId, sColorId) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        val = (title, price, totalPrice, styleNum, 1, brandId[0]['id'], link['mainAndCategId'], link['typeId'], link['id'], link['colorId'], link['sColorId'])
+        mycursor.execute(sql, val)
+        mydb.commit()
 
+        mycursor.execute("SELECT LAST_INSERT_ID() as insertedId")
+        insertedId = mycursor.fetchall()
+        insertedId = insertedId[0]['insertedId']
+        for size in availableSizesInNumber:
+            mycursor.execute("SELECT sizeId from size where size = %s", [size])
+            sizeId = mycursor.fetchall()
+            mycursor.execute("INSERT INTO linkSizeAndProduct(sizeId, productId) VALUES (%s, %s)", [sizeId[0]['sizeId'], insertedId])
+            mydb.commit()
+        
+        for image in mappedImages:
+            mycursor.execute("INSERT INTO images(imageUrl, productId) VALUES (%s, %s)", [image, insertedId])
+            mydb.commit()
+
+        mycursor.execute("UPDATE links SET inserted=%s where id = %s", [1, link['id']])
+        mydb.commit()
+        sem.release()
+    except Exception as e: 
+        print("error")
+        print(link)
+        print(e)
+        sem.release()
 
 mydb = mysql.connector.connect(
     host="localhost",
     user="root",
+    db="annencov",
     password="sarisco123"
 )
 
 mycursor = mydb.cursor(dictionary=True)
 
-mycursor.execute("select * from annencov.links")
+mycursor.execute("select * from links where inserted = 0")
 
 links = mycursor.fetchall()
-
-for link in links:
-    if(link['brand'] == 'nike1'):
+# print(links)
+def df_loops(link):
+    if(link['brand'] == 'nike' or link['brand'] == 'nike jordan'):
+        print("\n\n******** NIKE *********\n\n")
         headers = {
         'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
         'Cookie': '',
         'origin': 'https://www.nike.com'
         }
 
+        try:
+            s = requests.Session()
+            URL = link['link']
+            page = s.get(URL, headers=headers)
+            soup = BeautifulSoup(page.content, "html.parser")
+            scripts = soup.find_all("script")
+            details = ''
+            for script in scripts:
+                if(script.text.find("INITIAL_REDUX_STATE") != -1):
+                    details = script.text
+            styleNum = URL.split('/')[-1]
+            details = details.replace('window.INITIAL_REDUX_STATE=', '')
+            details = details[0:-1]
+            jsonDetails = json.loads(details)
+            images = jsonDetails['Threads']['products'][styleNum]['nodes'][0]['nodes']
+            mappedImages = list(map(lambda x: x["properties"]['squarishURL'].replace('t_default', 't_PDP_1280_v1/f_auto,q_auto:eco'), images))
+            price = jsonDetails['Threads']['products'][styleNum]['currentPrice']
+            allSizes = jsonDetails['Threads']['products'][styleNum]['skus']
+            availableSizes = jsonDetails['Threads']['products'][styleNum]['availableSkus']
+            title = jsonDetails['Threads']['products'][styleNum]['title']
+            availableSizesInNumber = []
+            for size in allSizes:
+                for asize in availableSizes:
+                    if(size['skuId'] == asize['id']):
+                        availableSizesInNumber.append(size['localizedSize'])
+            price = extractPrice(str(price), ',')
+
+            insertIntoDb(link, title, price, price, styleNum, availableSizesInNumber, mappedImages)
+        except Exception as e: 
+            print(link['link'])
+            print(e)
+            print("**")
+
+    elif(link['brand'] == 'new balance'):
+        print("\n\n******** NEWBALANCE *********\n\n")
+        
         s = requests.Session()
         URL = link['link']
         page = s.get(URL)
         soup = BeautifulSoup(page.content, "html.parser")
-        # print(soup)
-        scripts = soup.find_all("script")
-        details = ''
-        for script in scripts:
-            if(script.text.find("INITIAL_REDUX_STATE") != -1):
-                details = script.text
-        styleNum = URL.split('/')[-1]
-        details = details.replace('window.INITIAL_REDUX_STATE=', '')
-        details = details[0:-1]
-        jsonDetails = json.loads(details)
-        images = jsonDetails['Threads']['products'][styleNum]['nodes'][0]['nodes']
-        mappedImages = list(map(lambda x: x["properties"]['squarishURL'].replace('t_default', 't_PDP_1280_v1/f_auto,q_auto:eco'), images))
-        price = jsonDetails['Threads']['products'][styleNum]['currentPrice']
-        allSizes = jsonDetails['Threads']['products'][styleNum]['skus']
-        availableSizes = jsonDetails['Threads']['products'][styleNum]['availableSkus']
-        availableSizesInNumber = []
-        for size in allSizes:
-            for asize in availableSizes:
-                if(size['skuId'] == asize['id']):
-                    availableSizesInNumber.append(size['localizedSize'])
-        print(styleNum)
-        print(price)
-        print(availableSizesInNumber)
-        print(mappedImages)
+        product = soup.find_all("h1", class_="emos_H1")
+        title = product[0].text.strip()
+        price = soup.find(id="ctl00_u23_ascUrunDetay_dtUrunDetay_ctl00_lblSatisFiyat").text.strip()
+        cloudId = URL.split("/")[-1]
+        cloudId = cloudId.split("-")[-1].replace(".html", "")
+        extPrice = extractPrice(price)
+        styleNum = soup.find("div", class_="ems-prd-sort-desc").text.strip()
+        tags = soup.find_all("ul", class_="swiper-wrapper slide-wrp")[0]
+        images = tags.find_all("a")
+        mappedImages = []
+        for image in images:
+            try:
+                if(image["data-large"]):
+                    mappedImages.append(image["data-large"])
+            except KeyError:
+                continue
 
-    elif(link['brand'] == 'newbalance1'):
-        print("\n\n******** NEWBALANCE *********\n\n")
-        caps["pageLoadStrategy"] = "eager"
-        driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
-        URL = link['link']
-        driver.get(URL)
-        try:
-            myElem = WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.XPATH, '//*[@id="wrap"]/a/img')))
-            driver.get("https://www.newbalance.com.tr/urun/new-balance-520-411182.html")
-            pics = []
-            pic = driver.find_elements(By.TAG_NAME, 'img')
-            for p in pic:
-                src = p.get_attribute('src')
-                if(src != None and src.find('medium') != -1):
-                    pics.append(src)
+        sizes = page = s.get("https://www.newbalance.com.tr/usercontrols/urunDetay/ajxUrunSecenek.aspx?urn="+cloudId+"&fn=dty&std=True&type=scd1&index=0&objectId=ctl00_u23_ascUrunDetay_dtUrunDetay_ctl00&runatId=urunDetay&scd1=0&lang=tr-TR")
+        soup = BeautifulSoup(page.content, "html.parser")
+        realSizes = []
+        sizes = soup.find_all("a")
+        for size in sizes:
+            try:
+                if(size["class"] and size["class"].count("stokYok") != 0):     
+                    continue
+                else:
+                    realSizes.append(size.text.strip())
+            except KeyError:
+                realSizes.append(size.text.strip())
 
-            print(pics)
 
-            price = driver.find_element(By.CLASS_NAME, 'urunDetay_satisFiyat').text
-            print(price)
-
-            styleNum = driver.find_element(By.ID, 'plhKisaAciklama2').text
-            print(styleNum)
-
-            nsize = driver.find_elements(By.CLASS_NAME, 'stokYok')
-            # print(nsize)
-
-            sizes = driver.find_elements(By.CLASS_NAME, 'dropdownrow')
-            realSize = []
-            for size in sizes:
-                for ns in nsize:
-                    if(ns.get_attribute('innerHTML').find(size.text) == -1):
-                        realSize.append(size.text)
-                        break
-            
-            print(realSize)
-        except TimeoutException:
-            print("Loading took too much time!")
-        
-
-        driver.quit()
+        insertIntoDb(link, title, extPrice, extPrice, styleNum.split(" ")[-1], realSizes, mappedImages)
     
-    elif(link['brand'] == 'reebok1'):
+    elif(link['brand'] == 'reebok'):
         print("\n\n******** REEBOK *********\n\n")
-        caps["pageLoadStrategy"] = "eager"
-        driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
+        headers = {
+        'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
+        'Cookie': ''
+        }
+
+
+        s = requests.Session()
         URL = link['link']
-        driver.get(URL)
-        try:
-            myElem = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'image-blur')))
-            pics = []
-            pic = driver.find_elements(By.CLASS_NAME, 'image-blur')
-            # print(pic)
-            for p in pic:
-                src = p.get_attribute('src')
-                pics.append(src)
+        page = s.get(URL)
+        soup = BeautifulSoup(page.content, "html.parser")
 
-            print(pics)
+        images = soup.find_all("img", class_="image-blur")
+        mappedImages = []
+        for image in images:
+            try:
+                if(image["src"]):
+                    mappedImages.append(image["src"])
+            except KeyError:
+                continue
 
-            title = driver.find_element(By.XPATH, '//*[@id="product"]/div[2]/div/div/div[2]/div/div[2]/div[2]/h1').text
-            print(title)
 
-            price = driver.find_element(By.XPATH, '//*[@id="product"]/div[2]/div/div/div[2]/div/div[2]/div[3]/span').text
-            print(price)
+        title = soup.find("h1", class_="gl-heading--m mb-2px").text.strip()
+        price = soup.find_all("span", class_="gl-price__value")
+        if(price[0]):
+            mainPrice = extractPrice(price[0].text.strip())
+        if(price[1]):
+            mainTotalPrice = extractPrice(price[1].text.strip())
 
-            styleNum = driver.find_element(By.XPATH, '//*[@id="product"]/div[2]/div/div/div[2]/div/div[2]/p').text
-            print(styleNum)
+        styleNum = soup.find("div", class_="p-info").find("p", class_="gl-label").text.strip()
+        sizes = soup.find("div", class_="size-options").find_all("option")
+        realSizes = []
+        for size in sizes:
+            realSizes.append(size.text.strip().replace(',','.'))
 
-            # nsize = driver.find_elements(By.CLASS_NAME, 'stokYok')
-            # # print(nsize)
 
-            sizes = driver.find_element(By.CLASS_NAME, 'selectric-wrapper')
-            sizes.click()
-            print(sizes)
-            time.sleep(2)
-            newSizes = driver.find_elements(By.XPATH, '//*[@id="frm-addbasket"]/div[3]/div[3]/div/div/div[1]/div[3]/div/ul/li')
-
-            for size in newSizes:
-                print(size.text)
-        except TimeoutException:
-            print("Loading took too much time!")
-
-        
-        driver.quit()
+        insertIntoDb(link, title.replace('Ayakkabı', ''), mainTotalPrice, mainPrice, styleNum, realSizes, mappedImages)
 
     elif(link['brand'] == 'adidas'):
         print("\n\n******** ADIDAS *********\n\n")
@@ -168,487 +198,234 @@ for link in links:
           'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'
         }
         URL = link['link']
-        page = requests.get(URL, headers=adiheaders)
-        soup = BeautifulSoup(page.content, "html.parser")
-        script = soup.find_all("script")
-        details = json.loads(script[0].text)
-        print(details["image"])
-        print(details["name"])
-        sizes = requests.get("https://www.adidas.com.tr/api/products/EE6999/availability?sitePath=en", headers=headers)
-        filtered = list(filter(lambda var: var["availability_status"] == "IN_STOCK", sizes.json()["variation_list"]))
-        mappedSizes = list(map(lambda x: x["size"], filtered))
-        print(mappedSizes)
+        try:
+            styleNum = URL.split('/')[-1].replace('.html', '')
+            page = requests.get(URL, headers=adiheaders)
+            soup = BeautifulSoup(page.content, "html.parser")
+            scripts = soup.find_all("script")
+            # for sc in script:
+            #     print(sc.text, end="\n\n")
+            details = ''
+            for script in scripts:
+                if(script.text.find("@context") != -1):
+                    details = script.text
+            # print(details)
+            details = json.loads(details)
+            sizes = requests.get("https://www.adidas.com.tr/api/products/"+ styleNum + "/availability?sitePath=en", headers=adiheaders)
+            filtered = list(filter(lambda var: var["availability_status"] == "IN_STOCK", sizes.json()["variation_list"]))
+            mappedSizes = list(map(lambda x: x["size"], filtered))
+            price = extractPrice(str(details["offers"]["price"]))
+
+            insertIntoDb(link, details["name"],price, price, styleNum, mappedSizes, details["image"])
+        except Exception as e: 
+            print(link['link'])
+            print(e)
+            print("**")
     
-    elif(link['brand'] == 'puma1'):
+    elif(link['brand'] == 'puma'):
         print("\n\n******** PUMA *********\n\n")
-        caps["pageLoadStrategy"] = "eager"
-        driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
+        headers = {
+        'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
+        'Cookie': ''
+        }
+
+
+        s = requests.Session()
         URL = link['link']
-        driver.get(URL)
-        try:
-            # myElem = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'size___TqqSo')))
-            myElem = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'gallery-item__img')))
-            pics = []
-            time.sleep(5)
-            pics = driver.find_elements(By.CLASS_NAME, 'gallery-item__img')
-            for p in pics:
-                print(p.get_attribute('src'))
-            
+        page = s.get(URL)
+        soup = BeautifulSoup(page.content, "html.parser")
 
-            title = driver.find_element(By.XPATH, '//*[@id="product"]/div[2]/div/div[2]/h1').text
-            print(title)
-
-            price = driver.find_element(By.XPATH, '//*[@id="product-price-183255"]/span').text
-            print(price)
-
-            styleNum = driver.find_element(By.XPATH, '//*[@id="product"]/div[2]/div/div[3]/div[2]/span[2]').text
-            print(styleNum)
-
-            dropdown = driver.find_element(By.XPATH, '//*[@id="product_addtocart_form"]/div[2]/div[2]/div[1]')
-            dropdown.click();
-            time.sleep(3)
-            newSizes = driver.find_elements(By.CLASS_NAME, 'dropdown-box__value')
-            for size in newSizes:
-                print(size.text)
-                
-            
-            # print(realSize)
-        except TimeoutException:
-            print("Loading took too much time!")
+        images = soup.find_all("img", class_="gallery-item__img")
+        mappedImages = []
+        for image in images:
+            try:
+                if(image["src"]):
+                   mappedImages.append(image["data-lazy"])
+            except KeyError:
+                   continue
 
 
-        driver.quit()
+        title = soup.find("h1", class_="page-title").text.strip()
+        price = extractPrice(soup.find("span", class_="price").text.strip())
+        styleNum = soup.find("div", class_="product-article").find("span", class_="product-article__value").text.strip()
+        color = soup.find("span", class_="colors__text-name").text.strip()
+        details = ''
+        scripts = soup.find_all("script")
+        for script in scripts:
+            if(script.text.find("spConfig") != -1):
+              details = json.loads(script.text)
+        allColors = details["#product_addtocart_form"]["configurable"]["spConfig"]["attributes"]["93"]["options"]
+        allSizes = details["#product_addtocart_form"]["configurable"]["spConfig"]["attributes"]["141"]["options"]
+        founded = next(x for x in allColors if x["label"] == color)
+        foundedSizes = []
+        for size in allSizes:
+            for pr in size["products"]:
+                if(founded["products"].count(pr) != 0):
+                    foundedSizes.append(size["label"])
+
+        insertIntoDb(link, title.replace('Ayakkabı', ''), price, price, styleNum, foundedSizes, mappedImages)
     
-    elif(link['brand'] == 'asics1'):
+    elif(link['brand'] == 'asics'):
         print("\n\n******** ASICS *********\n\n")
-        caps["pageLoadStrategy"] = "eager"
-        driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
+        headers = {
+        'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
+        'Cookie': ''
+        }
+
+
+        s = requests.Session()
         URL = link['link']
-        driver.get(URL)
-        try:
-            # myElem = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'size___TqqSo')))
-            myElem = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'swiper-lazy')))
-            picsImage = []
-            time.sleep(5)
-            pics = driver.find_elements(By.CLASS_NAME, 'swiper-lazy')
-            
-            for p in pics:
-                if(p.get_attribute('src').find('livephotos') != -1):
-                    picsImage.append(p.get_attribute('src'))
-            
-            print(picsImage)
+        page = s.get(URL)
+        soup = BeautifulSoup(page.content, "html.parser")
 
-            title = driver.find_element(By.XPATH, '//*[@id="product-details-form"]/div/div[1]/div[2]/div/h1/span[1]').text
-            print(title)
-
-            price = driver.find_element(By.XPATH, '//*[@id="product-details-form"]/div/div[1]/div[2]/div/div[1]/div/span').text
-            print(price)
-
-            styleNum = driver.find_element(By.XPATH, '//*[@id="product-details-form"]/div/div[1]/div[2]/div/h1/span[2]').text
-            print(styleNum)
-
-            newSizes = driver.find_elements(By.CLASS_NAME, 'custom-control-description')
-            # dropdown.click();
-            # time.sleep(3)
-            # newSizes = driver.find_elements(By.CLASS_NAME, 'dropdown-box__value')
-            for size in newSizes:
-                if(size.text):
-                    print(size.text)
-                
-            
-            # print(realSize)
-        except TimeoutException:
-            print("Loading took too much time!")
+        images = soup.find("div", class_="swiper-wrapper").find_all("img", class_="swiper-lazy")
+        mappedImages = []
+        for image in images:
+            try:
+                if(image["src"]):
+                    mappedImages.append(image["data-src"])
+            except KeyError:
+                    continue
 
 
-        driver.quit()
+        title = soup.find("span", class_="sk-model-title").text.strip()
+        styleNum = soup.find("span", class_="sk-model-alt-title").text.strip()
+        price = extractPrice(soup.find("span", class_="pPrice").text.strip())
 
-    elif(link['brand'] == 'underarmour1'):
-        print("\n\n******** underarmour *********\n\n")
-        caps["pageLoadStrategy"] = "eager"
-        driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
-        URL = link['link']
-        driver.get(URL)
-        try:
-            myElem = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'js-product-main-image')))
-            time.sleep(5)
-            title = driver.find_element(By.XPATH, '/html/body/div[4]/div[4]/div[1]/div[2]/div/div[1]/div[2]/h1').text
-            price = driver.find_element(By.XPATH, '/html/body/div[4]/div[4]/div[1]/div[2]/div/div[1]/div[3]/div/div/pz-price').text
-            print(price)
+        mappedSizes = []
+        sizes = soup.find("div", class_="cl-size-input-container").find_all("span", class_="custom-control-description")
+        for size in sizes:
+            try:
+                mappedSizes.append(size.text.strip())
+            except KeyError:
+                continue
 
-            styleNum = driver.find_element(By.XPATH, '/html/body/div[4]/div[4]/div[1]/div[2]/div/div[1]/div[4]/div').text
-            print(styleNum)
-
-            print(title)
-            picsImage = []
-
-
-            #  newSizes = driver.find_elements(By.CLASS_NAME, 'custom-control-description')
-            # dropdown.click();
-            # time.sleep(3)
-            newSizes = driver.find_elements(By.CLASS_NAME, 'pz-variant__option')
-            for size in newSizes:
-                if(size.text):
-                    print(size.text)
-
-
-            mainpic = driver.find_element(By.CLASS_NAME, 'js-product-main-image')
-
-            mainpic.click()
-            time.sleep(5)
-            pics = driver.find_elements(By.CLASS_NAME, 'lg-image')
-            
-            for p in pics:
-                picsImage.append(p.get_attribute('src'))
-            
-            print(picsImage)
-        except TimeoutException:
-            print("Loading took too much time!")
-
-
-        driver.quit()
-
-    elif(link['brand'] == 'northface1'):
-        print("\n\n******** northface *********\n\n")
-        caps["pageLoadStrategy"] = "eager"
-        driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
-        URL = link['link']
-        driver.get(URL)
-        try:
-            myElem = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'bl-main')))
-            picsImage = []
-            pics = driver.find_elements(By.CLASS_NAME, 'bl-main')
-            
-            for p in pics:
-                picsImage.append(p.get_attribute('src'))
-        
-            print(picsImage)
-            # title = driver.find_element(By.XPATH, '/html/body/div[4]/div[4]/div[1]/div[2]/div/div[1]/div[2]/h1').text
-            # print(title)
-
-            price = driver.find_element(By.XPATH, '//*[@id="product-info"]/div[1]/span').text
-            print(price)
-
-            styleNum = driver.find_element(By.XPATH, '//*[@id="product-form"]/div[3]/div/div[2]/ul/li/div[2]').text
-            print(styleNum)
-
-            # picsIm 
-
-
-            newSizes = driver.find_elements(By.CLASS_NAME, 'limited-stock')
-            for size in newSizes:
-                print(size.text)
-
-            newSizes = driver.find_elements(By.CLASS_NAME, 'last-stock')
-            for size in newSizes:
-                print(size.text)
-        except TimeoutException:
-            print("Loading took too much time!")
-
-
-        driver.quit()
-           
-    elif(link['brand'] == 'salomon1'):
+        insertIntoDb(link, title, price, price, styleNum.split(" ")[-1], mappedSizes, mappedImages)
+      
+    elif(link['brand'] == 'salomon'):
         print("\n\n******** salomon *********\n\n")
-        caps["pageLoadStrategy"] = "eager"
-        driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
+        headers = {
+        'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
+        'Cookie': ''
+        }
+
+
+        s = requests.Session()
         URL = link['link']
-        driver.get(URL)
-        try:
-            myElem = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'js-fancybox-lg')))
-            picsImage = []
-            pics = driver.find_elements(By.CLASS_NAME, 'js-fancybox-lg')
-            
-            for p in pics:
-                picsImage.append(p.get_attribute('src'))
-        
-            print(picsImage)
-            title = driver.find_element(By.XPATH, '//*[@id="ProductPage"]/div[1]/div[1]/div/div[2]/div[1]/div/div[2]').text
-            print(title)
+        page = s.get(URL)
+        soup = BeautifulSoup(page.content, "html.parser")
 
-            price = driver.find_element(By.XPATH, '//*[@id="ProductPage"]/div[1]/div[1]/div/div[2]/div[1]/div/div[3]/div').text
-            print(price)
-
-            newSizes = driver.find_elements(By.XPATH, '//*[@id="ProductPage"]/div[1]/div[1]/div/div[2]/div[3]/div[2]/select/option')
-            newSizesDis = driver.find_elements(By.CLASS_NAME, 'not-selectable')
-            newSizesDisA = []
-            for nds in newSizesDis:
-                newSizesDisA.append(nds.text)
-
-            for size in newSizes:
-                if(newSizesDisA.count(size.text) == 0):
-                    print(size.text)
-        except TimeoutException:
-            print("Loading took too much time!")
+        images = soup.find_all("img", class_="js-fancybox-lg")
+        mappedImages = []
+        for image in images:
+            try:
+                if(image["src"]):
+                    mappedImages.append(image["data-fancybox-image-lg"])
+            except KeyError:
+                    continue
 
 
-        driver.quit()
+        title = soup.find("div", class_="product__content--title").text.strip()
+        price = extractPrice(soup.find("div", class_="product__content--price").text.strip(), ',')
 
-    elif(link['brand'] == 'converse1'):
-        print("\n\n******** converse *********\n\n")
-        caps["pageLoadStrategy"] = "eager"
-        driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
-        URL = link['link']
-        driver.get(URL)
-        try:
-            myElem = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'js-fancybox-lg')))
-            picsImage = []
-            pics = driver.find_elements(By.CLASS_NAME, 'js-fancybox-lg')
-            
-            for p in pics:
-                picsImage.append(p.get_attribute('src'))
-        
-            print(picsImage)
-            title = driver.find_element(By.XPATH, '//*[@id="ProductPage"]/div[1]/div/div[2]/div[2]/div/div[1]').text
-            print(title)
+        mappedSizes = []
+        sizes = soup.find("select", class_="js-variants-select").find_all("option")
+        for size in sizes:
+            try:
+                if(len(size["class"]) == 0):
+                    mappedSizes.append(size.text.strip())
+            except KeyError:
+                    continue
 
-            price = driver.find_element(By.XPATH, '//*[@id="ProductPage"]/div[1]/div/div[2]/div[2]/div/div[2]/div').text
-            print(price)
-
-            styleNum = driver.find_element(By.XPATH, '//*[@id="ProductPage"]/div[1]/div/div[2]/div[3]/div[2]/span').text
-            print(styleNum)
-
-            newSizes = driver.find_elements(By.XPATH, '//*[@id="ProductPage"]/div[1]/div/div[2]/div[5]/div[2]/select/option')
-            for size in newSizes:
-                if(size.get_attribute('disabled') == None):
-                    print(size.text)
-        except TimeoutException:
-            print("Loading took too much time!")
-
-
-        driver.quit()
-
+        insertIntoDb(link, title, price, price, "", mappedSizes, mappedImages)
+   
     elif(link['brand'] == 'mizuno'):
         print("\n\n******** mizuno *********\n\n")
-        caps["pageLoadStrategy"] = "eager"
-        driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
+        headers = {
+        'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
+        'Cookie': '',
+        'origin': 'https://www.mizunotr.com'
+        }
+
+        s = requests.Session()
         URL = link['link']
-        driver.get(URL)
-        try:
-            myElem = WebDriverWait(driver, 20).until(
-            EC.presence_of_all_elements_located((By.TAG_NAME, 'img')))
-            time.sleep(1)
-            # driver.get("https://www.mizunotr.com/wave-intense-tour-5-cc-tenis-ayakkabisi")
-            picsImage = []
-            pics = driver.find_elements(By.CLASS_NAME, 'image-wrapper')
-
-            for p in pics:
-                if(p.find_element(By.TAG_NAME, 'img')):
-                    pl = p.find_element(By.TAG_NAME, 'img').get_attribute('src')
-                    if(pl.find("-K") == -1):
-                        picsImage.append(pl)
-
-            print(picsImage)
-
-            title = driver.find_element(By.XPATH, '//*[@id="productName"]').text
-            print(title)
-
-            price = driver.find_element(
-                By.XPATH, '//*[@id="price-flexer"]/div[2]/div/span').text
-            print(price)
-
-            styleNum = driver.find_element(
-                By.XPATH, '//*[@id="supplier-question"]/div[1]/span').text
-            print(styleNum)
-
+        page = s.get(URL)
+        soup = BeautifulSoup(page.content, "html.parser")
+        product = soup.find(id="productDetail")
+        tags = product.find(id="pageContent")
+        images = tags.find_all("a")
+        mappedImages = []
+        for image in images:
             try:
-                mainpic = driver.find_element(
-                By.XPATH, '//*[@id="mobileBuyBtn"]/div[1]/div[2]/div/div[1]/div')
-
-                mainpic.click()
-                time.sleep(2)
-
-                newSizes = driver.find_elements(
-                    By.XPATH, '//*[@id="mobileBuyBtn"]/div[1]/div[2]/div/div[1]/div/div[1]/a')
-                for size in newSizes:
-                    print(size.text)
-            except ElementClickInterceptedException:
-                print("Exepted")
-                time.sleep(2)
-                mainpic = driver.find_element(
-                By.XPATH, '//*[@id="mobileBuyBtn"]/div[1]/div[2]/div/div[1]/div')
-
-                mainpic.click()
-
-                time.sleep(2)
-                newSizes = driver.find_elements(
-                    By.XPATH, '//*[@id="mobileBuyBtn"]/div[1]/div[2]/div/div[1]/div/div[1]/a')
-                for size in newSizes:
-                    print(size.text)
-                
-
-
-        except TimeoutException:
-            print("Loading took too much time!")
-
-
-        driver.quit()
-
-    elif(link['brand'] == 'lacoste'):
-        print("\n\n******** lacoste *********\n\n")
-        caps["pageLoadStrategy"] = "eager"
-        driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
-        URL = link['link']
-        driver.get(URL)
-        try:
-            myElem = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'js-popup-image__toggle')))
-            time.sleep(2)
-            picsImage = []
-            pics = driver.find_elements(By.CLASS_NAME, 'js-popup-image__toggle')
-            
-            for p in pics:
-                pl = p.find_element(By.TAG_NAME, 'img').get_attribute('src')
-                picsImage.append(pl)
-        
-            print(picsImage[0:5])
-
-            title = driver.find_element(By.XPATH, '/html/body/div[3]/div[1]/div[2]/div[1]/div[3]/div[3]/div[1]/div[2]/div[2]/div[1]/div[1]/div[1]/div/div[1]/h1').text
-            print(title)
-
-            price = driver.find_element(By.XPATH, '/html/body/div[3]/div[1]/div[2]/div[1]/div[3]/div[3]/div[1]/div[2]/div[2]/div[1]/div[1]/div[1]/div/div[2]/div[1]/span').text
-            print(price)
-
-            styleNum = driver.find_element(By.XPATH, '/html/body/div[3]/div[1]/div[2]/div[1]/div[3]/div[3]/div[2]/div/div/div[1]/div/div[1]/div/div[2]/p').text
-            print(styleNum)
-
-
-
-
-
-
-            cookie = driver.find_element(By.CLASS_NAME, 'js-cookie-consent-accept')
-            time.sleep(1)
-            cookie.click()
-
-            
-            mainpic = driver.find_element(By.XPATH, '/html/body/div[3]/div[1]/div[2]/div[1]/div[3]/div[3]/div[1]/div[2]/div[2]/div[1]/div[2]/div[1]/div[1]/a')
-            mainpic.click()
-            time.sleep(1)
-            
-            newSizes = driver.find_elements(By.XPATH, '/html/body/div[3]/div[1]/div[2]/div[1]/div[3]/div[3]/div[1]/div[2]/div[2]/div[1]/div[1]/div[2]/div/div[2]/div[2]/div[2]/div/div/div/ul/li')
-            for size in newSizes:
-                if(size.text):
-                    print(size.text)
-        except TimeoutException:
-            print("Loading took too much time!")
-
-
-        driver.quit()
-
-    elif(link['brand'] == 'ecco'):
-        print("\n\n******** ecco *********\n\n")
-        caps["pageLoadStrategy"] = "eager"
-        driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
-        URL = link['link']
-        driver.get(URL)
-        try:
-            myElem = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'ImgArea')))
-            time.sleep(1)
-            picsImage = []
-            pics = driver.find_elements(By.CLASS_NAME, 'ImgArea')
-            
-            for p in pics:
-                pl = p.get_attribute('href')
-                picsImage.append(pl)
-        
-            print(picsImage[0:3])
-
-            title = driver.find_element(By.XPATH, '//*[@id="NewPd"]/div[3]/div/div[1]/div/h1').text
-            print(title)
-
-            price = driver.find_element(By.CLASS_NAME, 'Price').text
-            print(price)
-
-            styleNum = driver.find_element(By.XPATH, '//*[@id="NewPd"]/div[3]/div/div[1]/div/span/span').text
-            print(styleNum)
-
-            sizeEl = driver.find_element(By.XPATH, '//*[@id="NewPd"]/div[3]/div/div[3]/div[2]/div')
-            
-            newSizes = sizeEl.find_elements(By.TAG_NAME, 'span')
-            for size in newSizes:
-                if(size.text):
-                    print(size.text)
-        except TimeoutException:
-            print("Loading took too much time!")
-
-
-        driver.quit()
-
-    elif(link['brand'] == 'columbia'):
-        print("\n\n******** columbia *********\n\n")
-        caps["pageLoadStrategy"] = "eager"
-        driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
-        URL = link['link']
-        driver.get(URL)
-        try:
-            myElem = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'MuiIconButton-label')))
-            time.sleep(2)
-            
-
-            title = driver.find_element(By.XPATH, '/html/body/div[2]/main/div/div[1]/div[2]/div/div[2]/div/div[1]/div[1]/div[1]/h1').text
-            print(title)
-
-            price = driver.find_element(By.XPATH, '//*[@id="__next"]/main/div/div[1]/div[2]/div/div[2]/div/div[1]/div[2]/div/span').text
-            print(price)
-
-            styleNum = driver.find_element(By.XPATH, '//*[@id="panel3bh-header"]/div[1]/div/div[2]/p')
-
-            print(styleNum.text)
-
-
-            sizeEl = driver.find_elements(By.CLASS_NAME, 'MuiTypography-caption')
-            for size in sizeEl:
-                if(size.get_attribute("data-testid") == "select-size"):
-                    print(size.text)
-
-            picsImage = []
-            pics = driver.find_elements(By.TAG_NAME, 'picture')
-        
-            for p in pics:
-                img = p.find_element(By.TAG_NAME, 'img')
-                picsImage.append(img.get_attribute("src"))
-        
-            print(picsImage)
-        except TimeoutException:
-            print("Loading took too much time!")
-
-
-        driver.quit()
+                if(image["href"].find('http') != -1):
+                  mappedImages.append(image["href"])
+            except KeyError:
+                continue
+        sizes = soup.find_all("div", class_="pos-r fl col-12 ease variantList var-new")[0]
+        realSize = sizes.find_all("a")
+        mappedSizes = []
+        for size in realSize:
+            mappedSizes.append(size.text.strip())
+        price = extractPrice(soup.find("span", class_="product-price").text.strip())
+        styleNum = soup.find_all("span", class_="supplier_product_code")[0]
+        title = soup.find(id="productName").text.strip().replace("Ayakkabı", "").replace("Spor", "").replace("Erkek", "").replace("Nubuk", "").replace("Yeşil", "").replace("Koyu", "").replace("Kadin", "")
+        insertIntoDb(link, title, price, price, styleNum.text.strip(), mappedSizes, mappedImages)
 
     elif(link['brand'] == 'timberland'):
         print("\n\n******** timberland *********\n\n")
-        caps["pageLoadStrategy"] = "eager"
-        driver = webdriver.Chrome(desired_capabilities=caps, options=options, executable_path=DRIVER_PATH)
-        URL = link['link']
-        driver.get(URL)
-        try:
-            myElem = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'img-item')))
-            title = driver.find_element(By.XPATH, '//*[@id="product"]/div[3]/div[2]/div/div[1]/h1').text
-            print(title)
-
-            price = driver.find_element(By.XPATH, '//*[@id="product"]/div[3]/div[2]/div/div[1]/div/span').text
-            print(price)
-            sizeEl = driver.find_elements(By.XPATH, '//*[@id="frm-addbasket"]/div[3]/div[2]/div/div[2]/ul/li')
-            
-            for size in sizeEl:
-                print(size.text)
-
-            picsImage = []
-            pics = driver.find_elements(By.CLASS_NAME, 'img-item')
-        
-            for p in pics:
-                img = p.find_element(By.TAG_NAME, 'img')
-                print(p.get_attribute("innerHTML"))
-                picsImage.append(img.get_attribute("src"))
-        
-            print(picsImage)
-        except TimeoutException:
-            print("Loading took too much time!")
+        headers = {
+        'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
+        'Cookie': ''
+        }
 
 
-        driver.quit()
+        s = requests.Session()
+        URL = "https://www.timberland.com.tr/bradstreet-ultra-koyu-yesil-nubuk-erkek-spor-ayakkabi-p_127237"
+        page = s.get(URL)
+        soup = BeautifulSoup(page.content, "html.parser")
+
+        images = soup.find("div", class_="main-gallery").find_all("img", class_="image-blur")
+        mappedImages = []
+        for image in images:
+            try:
+                if(image["src"]):
+                   mappedImages.append(image["data-image"])
+            except KeyError:
+                   continue
+
+
+        title = soup.find("h1", class_="p-name").text.strip()
+        # styleNum = soup.find("span", class_="sk-model-alt-title").text.strip()
+        price = extractPrice(soup.find("span", class_="one-price").text.strip())
+
+        mappedSizes = []
+        sizes = soup.find("div", class_="size-options").find_all("a", class_="")
+        for size in sizes:
+            try:
+                mappedSizes.append(size.text.strip())
+            except KeyError:
+                continue
+        title = title.replace("Ayakkabı", "").replace("Spor", "").replace("Erkek", "").replace("Nubuk", "").replace("Yeşil", "").replace("Koyu", "").replace("Kadin", "")
+        insertIntoDb(link, title, price, price, "", mappedSizes, mappedImages)
+    time.sleep(3)
            
            
            
+
+df = []
+
+links = [links[i:i + 10] for i in range(0, len(links), 10)]
+
+for chLink in links:
+    with ThreadPool(10) as pool:
+        for result in pool.map(df_loops, chLink):
+            df.append(result)
+    time.sleep(2)
+
+print(df)
+
+
+
+    
         
 
