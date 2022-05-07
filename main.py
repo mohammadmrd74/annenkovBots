@@ -95,7 +95,8 @@ def df_loops(link):
             details = details[0:-1]
             jsonDetails = json.loads(details)
             images = jsonDetails['Threads']['products'][styleNum]['nodes'][0]['nodes']
-            mappedImages = list(map(lambda x: x["properties"]['squarishURL'].replace('t_default', 't_PDP_1280_v1/f_auto,q_auto:eco'), images))
+            mappedImages = list(map(lambda x: x["properties"]['squarishURL'].replace('t_default', 't_PDP_1280_v1/f_auto,q_auto:eco') if ('squarishURL' in x["properties"]) else None, images))
+            mappedImages = list(filter(None, mappedImages))
             price = jsonDetails['Threads']['products'][styleNum]['currentPrice']
             allSizes = jsonDetails['Threads']['products'][styleNum]['skus']
             availableSizes = jsonDetails['Threads']['products'][styleNum]['availableSkus']
@@ -199,7 +200,8 @@ def df_loops(link):
         }
         URL = link['link']
         try:
-            styleNum = URL.split('/')[-1].replace('.html', '')
+            styleNum = URL.split('/')[-1]
+            styleNum = re.findall("^(.*?)\.html", styleNum)[0]
             page = requests.get(URL, headers=adiheaders)
             soup = BeautifulSoup(page.content, "html.parser")
             scripts = soup.find_all("script")
@@ -380,7 +382,7 @@ def df_loops(link):
 
 
         s = requests.Session()
-        URL = "https://www.timberland.com.tr/bradstreet-ultra-koyu-yesil-nubuk-erkek-spor-ayakkabi-p_127237"
+        URL =  link['link']
         page = s.get(URL)
         soup = BeautifulSoup(page.content, "html.parser")
 

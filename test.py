@@ -5,11 +5,65 @@ from numpy import size
 import decimal
 from regex import P
 import requests
+import mysql.connector
 from bs4 import BeautifulSoup
+import threading
+sem = threading.Semaphore()
 
 import json
 import re
 import pyperclip
+
+mydb = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    db="annencov",
+    password="sarisco123"
+)
+
+mycursor = mydb.cursor(dictionary=True)
+
+
+def Diff(first, second):
+    return list(set(first) - set(second))
+
+def updateDb(productId, price, totalPrice, sizes):
+    sem.acquire()
+    try:
+        print(productId)
+        mycursor.execute("select size from size join linkSizeAndProduct lsp on size.sizeId = lsp.sizeId where productId = %s", [productId])
+        beforeSizes = mycursor.fetchall()
+        beforeSizes = list(map(lambda x: x["size"], beforeSizes))
+        print(beforeSizes)
+
+        print(Diff(sizes, beforeSizes)) #sizes to insert
+        print(Diff(beforeSizes, sizes)) #sizes to update available = 0
+        sizesToInsert = Diff(sizes, beforeSizes)
+        sizezToUpdate = Diff(beforeSizes, sizes)
+
+        if(len(sizesToInsert)):
+          for size in sizesToInsert:
+              mycursor.execute("SELECT sizeId from size where size = %s", [size])
+              sizeId = mycursor.fetchall()
+              mycursor.execute("INSERT INTO linkSizeAndProduct(sizeId, productId) VALUES (%s, %s)", [sizeId[0]['sizeId'], productId])
+              mydb.commit()
+
+        if(len(sizezToUpdate)):
+          for size in sizezToUpdate:
+              mycursor.execute("SELECT sizeId from size where size = %s", [size])
+              sizeId = mycursor.fetchall()
+              mycursor.execute("UPDATE linkSizeAndProduct SET available = 0 where sizeId = %s AND productId = %s", [sizeId[0]['sizeId'], productId])
+              mydb.commit()
+
+        mycursor.execute("UPDATE products SET price=%s, totalPrice = %s where productId = %s", [price, totalPrice, productId])
+        mydb.commit()
+        sem.release()
+    except Exception as e: 
+        print("error")
+        print(productId)
+        print(e)
+        sem.release()
+
 
 def extractPrice(price, sep='.'):
   r = re.compile(r'(\d[\d.,]*)\b')
@@ -24,45 +78,40 @@ def extractPrice(price, sep='.'):
   
   return extPrice
 
+headers = {
+'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
+'Cookie': '',
+'origin': 'https://www.nike.com'
+}
 
-print("\n\n******** NEWBALANCE *********\n\n")
-        
-s = requests.Session()
-URL = "https://www.newbalance.com.tr/urun/new-balance-520-411182.html"
-page = s.get(URL)
-soup = BeautifulSoup(page.content, "html.parser")
-product = soup.find_all("h1", class_="emos_H1")
-title = product[0].text.strip()
-price = soup.find(id="ctl00_u23_ascUrunDetay_dtUrunDetay_ctl00_lblSatisFiyat").text.strip()
-cloudId = URL.split("/")[-1]
-cloudId = cloudId.split("-")[-1].replace(".html", "")
-extPrice = extractPrice(price)
-styleNum = soup.find("div", class_="ems-prd-sort-desc").text.strip()
-tags = soup.find_all("ul", class_="swiper-wrapper slide-wrp")[0]
-images = tags.find_all("a")
-mappedImages = []
-for image in images:
-    try:
-        if(image["data-large"]):
-            mappedImages.append(image["data-large"])
-    except KeyError:
-        continue
+# mycursor.execute("select * from products where productId = 124")
+ 
+# products = mycursor.fetchall()
 
-sizes = page = s.get("https://www.newbalance.com.tr/usercontrols/urunDetay/ajxUrunSecenek.aspx?urn="+cloudId+"&fn=dty&std=True&type=scd1&index=0&objectId=ctl00_u23_ascUrunDetay_dtUrunDetay_ctl00&runatId=urunDetay&scd1=0&lang=tr-TR")
-soup = BeautifulSoup(page.content, "html.parser")
-realSizes = []
-sizes = soup.find_all("a")
-for size in sizes:
-    try:
-        if(size["class"] and size["class"].count("stokYok") != 0):     
-            continue
-        else:
-            realSizes.append(size.text.strip())
-    except KeyError:
-        realSizes.append(size.text.strip())
+try:
+    s = requests.Session()
+    URL = 'https://www.reebok.com.tr/reebok-lite-plus-30-ayakkabi_84205'
+    page = s.get(URL)
+    soup = BeautifulSoup(page.content, "html.parser")
 
-print(title)
-print(extPrice)
-print(realSizes)
-print(mappedImages)
-print(styleNum.split(" ")[-1])
+    price = soup.find_all("span", class_="gl-price__value")
+    print(price)
+    if(price[0]):
+        mainPrice = extractPrice(price[0].text.strip())
+    if(price[1]):
+        mainTotalPrice = extractPrice(price[1].text.strip())
+
+    sizes = soup.find("div", class_="size-options").find_all("option")
+    print(sizes)
+    realSizes = []
+    for size in sizes:
+        realSizes.append(size.text.strip().replace(',','.'))
+
+    print(sizes)
+    # updateDb(link['productId'], mainTotalPrice, mainPrice, sizes)
+except Exception as e: 
+    # f.write(str(link['link']) + '\n')
+    # print(link)
+    print(e)
+    print("**")
+
