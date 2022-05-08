@@ -65,12 +65,13 @@ def updateDb(productId, price, totalPrice, sizes):
               mycursor.execute("UPDATE linkSizeAndProduct SET available = 0 where sizeId = %s AND productId = %s", [sizeId[0]['sizeId'], productId])
               mydb.commit()
 
-        mycursor.execute("UPDATE products SET price=%s, totalPrice = %s where productId = %s, active=1", [price, totalPrice, productId])
+        mycursor.execute("UPDATE products SET price=%s, totalPrice = %s,  active=1 where productId = %s", [price, totalPrice, productId])
         mydb.commit()
         sem.release()
         print('sem rel', productId)
 
     except Exception as e: 
+        print(e)
         f.write(str("update error" + str(productId)) + '\n')
 
         sem.release()
@@ -92,7 +93,7 @@ mydb = mysql.connector.connect(
 
 mycursor = mydb.cursor(dictionary=True)
 
-mycursor.execute("select productId, link, brandId from products")
+mycursor.execute("select productId, link, brandId from products where productId= 239")
 
 products = mycursor.fetchall()
 # print(products)
@@ -116,10 +117,18 @@ def df_loops(link):
             for script in scripts:
                 if(script.text.find("INITIAL_REDUX_STATE") != -1):
                     details = script.text
-            styleNum = soup.find("li", class_="description-preview__style-color ncss-li").text.strip().replace('Stil: ', '')
+            fstyleNum = soup.find("li", class_="description-preview__style-color ncss-li").text.strip().replace('Stil: ', '')
+            styleNum = ''
             details = details.replace('window.INITIAL_REDUX_STATE=', '')
             details = details[0:-1]
             jsonDetails = json.loads(details)
+            if(fstyleNum not in jsonDetails['Threads']['products']):
+                urlst = URL.split('/')[-1]
+                print(urlst)
+                if(urlst in jsonDetails['Threads']['products']):
+                    styleNum = urlst
+                else:
+                    styleNum = list(jsonDetails['Threads']['products'].keys())[0]
             price = jsonDetails['Threads']['products'][styleNum]['currentPrice']
             fullPrice = jsonDetails['Threads']['products'][styleNum]['fullPrice']
             allSizes = jsonDetails['Threads']['products'][styleNum]['skus']
@@ -403,20 +412,19 @@ def df_loops(link):
             print(e)
             print("**")
 
-    # time.sleep(2)
-           
-           
+
            
 
 df = []
 random.shuffle(products)
+print(products)
 links = [products[i:i + 10] for i in range(0, len(products), 10)]
 
 for chLink in links:
     with ThreadPool(10) as pool:
         for result in pool.map(df_loops, chLink):
             df.append(result)
-    # time.sleep(3)
+    time.sleep(3)
 
 print(df)
 f.close()

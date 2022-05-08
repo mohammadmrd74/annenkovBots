@@ -90,10 +90,18 @@ def df_loops(link):
             for script in scripts:
                 if(script.text.find("INITIAL_REDUX_STATE") != -1):
                     details = script.text
-            styleNum = soup.find("li", class_="description-preview__style-color ncss-li").text.strip().replace('Stil: ', '')
+            fstyleNum = soup.find("li", class_="description-preview__style-color ncss-li").text.strip().replace('Stil: ', '')
+            styleNum = ''
             details = details.replace('window.INITIAL_REDUX_STATE=', '')
             details = details[0:-1]
             jsonDetails = json.loads(details)
+            if(fstyleNum not in jsonDetails['Threads']['products']):
+                urlst = URL.split('/')[-1]
+                print(urlst)
+                if(urlst in jsonDetails['Threads']['products']):
+                    styleNum = urlst
+                else:
+                    styleNum = list(jsonDetails['Threads']['products'].keys())[0]
             images = jsonDetails['Threads']['products'][styleNum]['nodes'][0]['nodes']
             mappedImages = list(map(lambda x: x["properties"]['squarishURL'].replace('t_default', 't_PDP_1280_v1/f_auto,q_auto:eco') if ('squarishURL' in x["properties"]) else None, images))
             mappedImages = list(filter(None, mappedImages))
@@ -110,7 +118,7 @@ def df_loops(link):
             price = extractPrice(str(price), ',')
             fullPrice = extractPrice(str(fullPrice), ',')
 
-            insertIntoDb(link, title, fullPrice, price, styleNum, availableSizesInNumber, mappedImages)
+            insertIntoDb(link, title, fullPrice, price, fstyleNum, availableSizesInNumber, mappedImages)
         except Exception as e: 
             print(link['link'])
             print(e)
