@@ -88,30 +88,49 @@ headers = {
  
 # products = mycursor.fetchall()
 
-try:
-    s = requests.Session()
-    URL = 'https://www.reebok.com.tr/reebok-lite-plus-30-ayakkabi_84205'
-    page = s.get(URL)
-    soup = BeautifulSoup(page.content, "html.parser")
+# try:
+s = requests.Session()
+URL = 'https://www.salomon.com.tr/s-lab-sense-7-kirmizi-kadin-trail-running-l40225900/'
+print("\n\n******** timberland *********\n\n")
+headers = {
+'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
+'Cookie': ''
+}
 
-    price = soup.find_all("span", class_="gl-price__value")
-    print(price)
-    if(price[0]):
-        mainPrice = extractPrice(price[0].text.strip())
-    if(price[1]):
-        mainTotalPrice = extractPrice(price[1].text.strip())
 
-    sizes = soup.find("div", class_="size-options").find_all("option")
-    print(sizes)
-    realSizes = []
-    for size in sizes:
-        realSizes.append(size.text.strip().replace(',','.'))
+s = requests.Session()
+URL =  'https://www.timberland.com.tr/bradstreet-ultra-gri-nubuk-erkek-spor-ayakkabi-p_127238'
+page = s.get(URL)
+soup = BeautifulSoup(page.content, "html.parser")
 
-    print(sizes)
-    # updateDb(link['productId'], mainTotalPrice, mainPrice, sizes)
-except Exception as e: 
-    # f.write(str(link['link']) + '\n')
-    # print(link)
-    print(e)
-    print("**")
+images = soup.find("div", class_="main-gallery").find_all("img", class_="image-blur")
+mappedImages = []
+for image in images:
+    try:
+        if(image["src"]):
+            mappedImages.append(image["data-image"])
+    except KeyError:
+            continue
+
+
+title = soup.find("h1", class_="p-name").text.strip()
+# styleNum = soup.find("span", class_="sk-model-alt-title").text.strip()
+price = extractPrice(soup.find("span", class_="one-price").text.strip())
+
+mappedSizes = []
+sizes = soup.find("div", class_="size-options").find_all("a", class_="")
+for size in sizes:
+    try:
+        mappedSizes.append(size.text.strip())
+    except KeyError:
+        continue
+print(mappedSizes)
+print(title)
+print(price)
+print(mappedImages)
+# except Exception as e: 
+#     # f.write(str(link['link']) + '\n')
+#     # print(link)
+#     print(e)
+#     # print("**")
 

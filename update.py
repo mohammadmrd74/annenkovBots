@@ -7,7 +7,9 @@ import json
 import time
 import os
 import threading
+import random
 sem = threading.Semaphore()
+sem1 = threading.Semaphore()
 
 path = os.path.abspath(os.getcwd())
 print(path)
@@ -36,21 +38,19 @@ def Diff(first, second):
     return list(set(first) - set(second))
 
 def updateDb(productId, price, totalPrice, sizes):
-    print('sem', productId)
+    print('sem get', productId)
     sem.acquire()
     try:
         mycursor.execute("select size from size join linkSizeAndProduct lsp on size.sizeId = lsp.sizeId where productId = %s", [productId])
         beforeSizes = mycursor.fetchall()
         beforeSizes = list(map(lambda x: x["size"], beforeSizes))
-        print(beforeSizes)
-
-        print(Diff(sizes, beforeSizes)) #sizes to insert
-        print(Diff(beforeSizes, sizes)) #sizes to update available = 0
+        # print(Diff(sizes, beforeSizes)) #sizes to insert
+        # print(Diff(beforeSizes, sizes)) #sizes to update available = 0
         sizesToInsert = Diff(sizes, beforeSizes)
         sizezToUpdate = Diff(beforeSizes, sizes)
 
         if(len(sizesToInsert)):
-          print('sizesToInsert', productId)
+        #   print('sizesToInsert', productId)
           for size in sizesToInsert:
               mycursor.execute("SELECT sizeId from size where size = %s", [size])
               sizeId = mycursor.fetchall()
@@ -58,27 +58,29 @@ def updateDb(productId, price, totalPrice, sizes):
               mydb.commit()
 
         if(len(sizezToUpdate)):
-          print('sizezToUpdate', productId)
+        #   print('sizezToUpdate', productId)
           for size in sizezToUpdate:
               mycursor.execute("SELECT sizeId from size where size = %s", [size])
               sizeId = mycursor.fetchall()
               mycursor.execute("UPDATE linkSizeAndProduct SET available = 0 where sizeId = %s AND productId = %s", [sizeId[0]['sizeId'], productId])
               mydb.commit()
 
-        mycursor.execute("UPDATE products SET price=%s, totalPrice = %s where productId = %s", [price, totalPrice, productId])
+        mycursor.execute("UPDATE products SET price=%s, totalPrice = %s where productId = %s, active=1", [price, totalPrice, productId])
         mydb.commit()
         sem.release()
         print('sem rel', productId)
 
     except Exception as e: 
-        print("error")
-        print(productId)
-        print(e)
-        print("error end")
         f.write(str("update error" + str(productId)) + '\n')
 
         sem.release()
-        print('sem rel', productId)
+
+def disableProduct(id):
+    print('disableProduct', id)
+    sem.acquire()
+    mycursor.execute("UPDATE products SET active=0 where productId = %s", [id])
+    mydb.commit()
+    sem.release()
 
 
 mydb = mysql.connector.connect(
@@ -90,12 +92,12 @@ mydb = mysql.connector.connect(
 
 mycursor = mydb.cursor(dictionary=True)
 
-mycursor.execute("select productId, link, brandId from products where brandId = 3")
+mycursor.execute("select productId, link, brandId from products")
 
 products = mycursor.fetchall()
 # print(products)
 def df_loops(link):
-    if(link['brandId'] == 15 or link['brandId'] == 235):
+    if(link['brandId'] == 1 or link['brandId'] == 23):
         print("\n\n******** NIKE *********\n\n")
         headers = {
         'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
@@ -114,11 +116,12 @@ def df_loops(link):
             for script in scripts:
                 if(script.text.find("INITIAL_REDUX_STATE") != -1):
                     details = script.text
-            styleNum = URL.split('/')[-1]
+            styleNum = soup.find("li", class_="description-preview__style-color ncss-li").text.strip().replace('Stil: ', '')
             details = details.replace('window.INITIAL_REDUX_STATE=', '')
             details = details[0:-1]
             jsonDetails = json.loads(details)
             price = jsonDetails['Threads']['products'][styleNum]['currentPrice']
+            fullPrice = jsonDetails['Threads']['products'][styleNum]['fullPrice']
             allSizes = jsonDetails['Threads']['products'][styleNum]['skus']
             availableSizes = jsonDetails['Threads']['products'][styleNum]['availableSkus']
             availableSizesInNumber = []
@@ -127,10 +130,12 @@ def df_loops(link):
                     if(size['skuId'] == asize['id']):
                         availableSizesInNumber.append(size['localizedSize'])
             price = extractPrice(str(price), ',')
+            fullPrice = extractPrice(str(fullPrice), ',')
 
-            updateDb(link['productId'], price, price, availableSizesInNumber)
+            updateDb(link['productId'], fullPrice, price, availableSizesInNumber)
         except Exception as e: 
             print(link)
+            disableProduct(link['productId'])
             f.write(str(link['link']) + '****' + str(link['productId']) + '\n')
             print(e)
             print("**")
@@ -164,12 +169,13 @@ def df_loops(link):
 
             updateDb(link['productId'], extPrice, extPrice, realSizes)
         except Exception as e: 
+            disableProduct(link['productId'])
             f.write(str(link['link']) + '\n')
             print(link)
             print(e)
             print("**")
     
-    elif(link['brandId'] == 55):
+    elif(link['brandId'] == 5):
         print("\n\n******** REEBOK *********\n\n")
         headers = {
         'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
@@ -183,6 +189,7 @@ def df_loops(link):
             soup = BeautifulSoup(page.content, "html.parser")
 
             price = soup.find_all("span", class_="gl-price__value")
+            print(price)
             if(price[0]):
                 mainPrice = extractPrice(price[0].text.strip())
             if(price[1]):
@@ -192,16 +199,18 @@ def df_loops(link):
             realSizes = []
             for size in sizes:
                 realSizes.append(size.text.strip().replace(',','.'))
+            print(realSizes)
 
 
             updateDb(link['productId'], mainTotalPrice, mainPrice, realSizes)
         except Exception as e: 
             f.write(str(link['link']) + '\n')
+            disableProduct(link['productId'])
             print(link)
             print(e)
             print("**")
 
-    elif(link['brandId'] == 25):
+    elif(link['brandId'] == 2):
         print(link)
         print("\n\n******** ADIDAS *********\n\n")
         adiheaders = {
@@ -229,12 +238,13 @@ def df_loops(link):
             print(link['productId'], price, price, mappedSizes)
             updateDb(link['productId'], price, price, mappedSizes)
         except Exception as e: 
+            disableProduct(link['productId'])
             f.write(str(link['link']) + '\n')
             print(link)
             print(e)
             print("**")
     
-    elif(link['brandId'] == 45):
+    elif(link['brandId'] == 4):
         print("\n\n******** PUMA *********\n\n")
         headers = {
         'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
@@ -266,12 +276,13 @@ def df_loops(link):
             updateDb(link['productId'], price, price, foundedSizes)
 
         except Exception as e: 
+            disableProduct(link['productId'])
             f.write(str(link['link']) + '\n')
             print(link)
             print(e)
             print("**")
     
-    elif(link['brandId'] == 65):
+    elif(link['brandId'] == 6):
         print("\n\n******** ASICS *********\n\n")
         headers = {
         'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
@@ -294,6 +305,7 @@ def df_loops(link):
                 except KeyError:
                     continue
         except Exception as e: 
+            disableProduct(link['productId'])
             f.write(str(link['link']) + '\n')
             print(link)
             print(e)
@@ -301,7 +313,7 @@ def df_loops(link):
 
         updateDb(link['productId'], price, price, mappedSizes)
       
-    elif(link['brandId'] == 75):
+    elif(link['brandId'] == 7):
         print("\n\n******** salomon *********\n\n")
         headers = {
         'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
@@ -321,18 +333,20 @@ def df_loops(link):
             for size in sizes:
                 try:
                     if(len(size["class"]) == 0):
-                        mappedSizes.append(size.text.strip())
+                        if(size.text.strip()):
+                             mappedSizes.append(size.text.strip())
                 except KeyError:
                         continue
             updateDb(link['productId'], price, price, mappedSizes)
         except Exception as e: 
+            disableProduct(link['productId'])
             f.write(str(link['link']) + '\n')
             print(link)
             print(e)
             print("**")
 
    
-    elif(link['brandId'] == 115):
+    elif(link['brandId'] == 11):
         print("\n\n******** mizuno *********\n\n")
         headers = {
         'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
@@ -353,12 +367,13 @@ def df_loops(link):
 
             updateDb(link['productId'], price, price, mappedSizes)
         except Exception as e: 
+            disableProduct(link['productId'])
             f.write(str(link['link']) + '\n')
             print(link)
             print(e)
             print("**")
 
-    elif(link['brandId'] == 95):
+    elif(link['brandId'] == 9):
         print("\n\n******** timberland *********\n\n")
         headers = {
         'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
@@ -382,25 +397,26 @@ def df_loops(link):
                     continue
             updateDb(link['productId'], price, price, mappedSizes)
         except Exception as e: 
+            disableProduct(link['productId'])
             f.write(str(link['link']) + '\n')
             print(link)
             print(e)
             print("**")
 
-    time.sleep(2)
+    # time.sleep(2)
            
            
            
 
 df = []
-
+random.shuffle(products)
 links = [products[i:i + 10] for i in range(0, len(products), 10)]
 
 for chLink in links:
     with ThreadPool(10) as pool:
         for result in pool.map(df_loops, chLink):
             df.append(result)
-    # time.sleep(10)
+    # time.sleep(3)
 
 print(df)
 f.close()

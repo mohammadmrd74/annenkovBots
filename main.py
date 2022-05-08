@@ -31,8 +31,8 @@ def insertIntoDb(link, title, price, totalPrice, styleNum, availableSizesInNumbe
     try:
         mycursor.execute("SELECT id from brands where brandName = %s", [link['brand']])
         brandId = mycursor.fetchall()
-        sql = "INSERT INTO products (title, price, totalPrice, styleNumber, currencyId, brandId, mainAndCategoryId, typeId, linkId, colorId, sColorId) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-        val = (title, price, totalPrice, styleNum, 1, brandId[0]['id'], link['mainAndCategId'], link['typeId'], link['id'], link['colorId'], link['sColorId'])
+        sql = "INSERT INTO products (title, price, totalPrice, styleNumber, currencyId, brandId, mainAndCategoryId, typeId, linkId, link, colorId, sColorId) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        val = (title, price, totalPrice, styleNum, 1, brandId[0]['id'], link['mainAndCategId'], link['typeId'], link['id'], link['link'], link['colorId'], link['sColorId'])
         mycursor.execute(sql, val)
         mydb.commit()
 
@@ -90,7 +90,7 @@ def df_loops(link):
             for script in scripts:
                 if(script.text.find("INITIAL_REDUX_STATE") != -1):
                     details = script.text
-            styleNum = URL.split('/')[-1]
+            styleNum = soup.find("li", class_="description-preview__style-color ncss-li").text.strip().replace('Stil: ', '')
             details = details.replace('window.INITIAL_REDUX_STATE=', '')
             details = details[0:-1]
             jsonDetails = json.loads(details)
@@ -98,6 +98,7 @@ def df_loops(link):
             mappedImages = list(map(lambda x: x["properties"]['squarishURL'].replace('t_default', 't_PDP_1280_v1/f_auto,q_auto:eco') if ('squarishURL' in x["properties"]) else None, images))
             mappedImages = list(filter(None, mappedImages))
             price = jsonDetails['Threads']['products'][styleNum]['currentPrice']
+            fullPrice = jsonDetails['Threads']['products'][styleNum]['fullPrice']
             allSizes = jsonDetails['Threads']['products'][styleNum]['skus']
             availableSizes = jsonDetails['Threads']['products'][styleNum]['availableSkus']
             title = jsonDetails['Threads']['products'][styleNum]['title']
@@ -107,8 +108,9 @@ def df_loops(link):
                     if(size['skuId'] == asize['id']):
                         availableSizesInNumber.append(size['localizedSize'])
             price = extractPrice(str(price), ',')
+            fullPrice = extractPrice(str(fullPrice), ',')
 
-            insertIntoDb(link, title, price, price, styleNum, availableSizesInNumber, mappedImages)
+            insertIntoDb(link, title, fullPrice, price, styleNum, availableSizesInNumber, mappedImages)
         except Exception as e: 
             print(link['link'])
             print(e)
@@ -232,40 +234,47 @@ def df_loops(link):
         }
 
 
-        s = requests.Session()
-        URL = link['link']
-        page = s.get(URL)
-        soup = BeautifulSoup(page.content, "html.parser")
+        try:
+            s = requests.Session()
+            URL = link['link']
+            page = s.get(URL)
+            soup = BeautifulSoup(page.content, "html.parser")
 
-        images = soup.find_all("img", class_="gallery-item__img")
-        mappedImages = []
-        for image in images:
-            try:
-                if(image["src"]):
-                   mappedImages.append(image["data-lazy"])
-            except KeyError:
-                   continue
+            images = soup.find_all("img", class_="gallery-item__img")
+            mappedImages = []
+            for image in images:
+                try:
+                    if(image["src"]):
+                        mappedImages.append(image["data-lazy"])
+                except KeyError:
+                    continue
 
 
-        title = soup.find("h1", class_="page-title").text.strip()
-        price = extractPrice(soup.find("span", class_="price").text.strip())
-        styleNum = soup.find("div", class_="product-article").find("span", class_="product-article__value").text.strip()
-        color = soup.find("span", class_="colors__text-name").text.strip()
-        details = ''
-        scripts = soup.find_all("script")
-        for script in scripts:
-            if(script.text.find("spConfig") != -1):
-              details = json.loads(script.text)
-        allColors = details["#product_addtocart_form"]["configurable"]["spConfig"]["attributes"]["93"]["options"]
-        allSizes = details["#product_addtocart_form"]["configurable"]["spConfig"]["attributes"]["141"]["options"]
-        founded = next(x for x in allColors if x["label"] == color)
-        foundedSizes = []
-        for size in allSizes:
-            for pr in size["products"]:
-                if(founded["products"].count(pr) != 0):
-                    foundedSizes.append(size["label"])
-
-        insertIntoDb(link, title.replace('Ayakkabı', ''), price, price, styleNum, foundedSizes, mappedImages)
+            title = soup.find("h1", class_="page-title").text.strip()
+            price = extractPrice(soup.find("span", class_="price").text.strip())
+            styleNum = soup.find("div", class_="product-article").find("span", class_="product-article__value").text.strip()
+            color = soup.find("span", class_="colors__text-name").text.strip()
+            details = ''
+            scripts = soup.find_all("script")
+            for script in scripts:
+                if(script.text.find("spConfig") != -1):
+                    details = json.loads(script.text)
+            allColors = details["#product_addtocart_form"]["configurable"]["spConfig"]["attributes"]["93"]["options"]
+            allSizes = details["#product_addtocart_form"]["configurable"]["spConfig"]["attributes"]["141"]["options"]
+            founded = next(x for x in allColors if x["label"] == color)
+            foundedSizes = []
+            for size in allSizes:
+                for pr in size["products"]:
+                    if(founded["products"].count(pr) != 0):
+                        foundedSizes.append(size["label"])
+            
+            print(link, title.replace('Ayakkabı', ''), price, price, styleNum, foundedSizes, mappedImages)
+            insertIntoDb(link, title.replace('Ayakkabı', ''), price, price, styleNum, foundedSizes, mappedImages)
+        except Exception as e: 
+            print('asics')
+            print(link)
+            print(e)
+            print("**")
     
     elif(link['brand'] == 'asics'):
         print("\n\n******** ASICS *********\n\n")
@@ -275,34 +284,40 @@ def df_loops(link):
         }
 
 
-        s = requests.Session()
-        URL = link['link']
-        page = s.get(URL)
-        soup = BeautifulSoup(page.content, "html.parser")
+        try:
+            s = requests.Session()
+            URL = link['link']
+            page = s.get(URL)
+            soup = BeautifulSoup(page.content, "html.parser")
 
-        images = soup.find("div", class_="swiper-wrapper").find_all("img", class_="swiper-lazy")
-        mappedImages = []
-        for image in images:
-            try:
-                if(image["src"]):
-                    mappedImages.append(image["data-src"])
-            except KeyError:
+            images = soup.find("div", class_="swiper-wrapper").find_all("img", class_="swiper-lazy")
+            mappedImages = []
+            for image in images:
+                try:
+                    if(image["src"]):
+                        mappedImages.append(image["data-src"])
+                except KeyError:
+                        continue
+
+
+            title = soup.find("span", class_="sk-model-title").text.strip()
+            styleNum = soup.find("span", class_="sk-model-alt-title").text.strip()
+            price = extractPrice(soup.find("span", class_="pPrice").text.strip())
+
+            mappedSizes = []
+            sizes = soup.find("div", class_="cl-size-input-container").find_all("span", class_="custom-control-description")
+            for size in sizes:
+                try:
+                    mappedSizes.append(size.text.strip())
+                except KeyError:
                     continue
 
-
-        title = soup.find("span", class_="sk-model-title").text.strip()
-        styleNum = soup.find("span", class_="sk-model-alt-title").text.strip()
-        price = extractPrice(soup.find("span", class_="pPrice").text.strip())
-
-        mappedSizes = []
-        sizes = soup.find("div", class_="cl-size-input-container").find_all("span", class_="custom-control-description")
-        for size in sizes:
-            try:
-                mappedSizes.append(size.text.strip())
-            except KeyError:
-                continue
-
-        insertIntoDb(link, title, price, price, styleNum.split(" ")[-1], mappedSizes, mappedImages)
+            insertIntoDb(link, title, price, price, styleNum.split(" ")[-1], mappedSizes, mappedImages)
+        except Exception as e: 
+            print('asics')
+            print(link)
+            print(e)
+            print("**")
       
     elif(link['brand'] == 'salomon'):
         print("\n\n******** salomon *********\n\n")
@@ -312,34 +327,41 @@ def df_loops(link):
         }
 
 
-        s = requests.Session()
-        URL = link['link']
-        page = s.get(URL)
-        soup = BeautifulSoup(page.content, "html.parser")
+        try:
+            s = requests.Session()
+            URL = link['link']
+            page = s.get(URL)
+            soup = BeautifulSoup(page.content, "html.parser")
 
-        images = soup.find_all("img", class_="js-fancybox-lg")
-        mappedImages = []
-        for image in images:
-            try:
-                if(image["src"]):
-                    mappedImages.append(image["data-fancybox-image-lg"])
-            except KeyError:
-                    continue
+            images = soup.find_all("img", class_="js-fancybox-lg")
+            mappedImages = []
+            for image in images:
+                try:
+                    if(image["src"]):
+                        mappedImages.append(image["data-fancybox-image-lg"])
+                except KeyError:
+                        continue
 
 
-        title = soup.find("div", class_="product__content--title").text.strip()
-        price = extractPrice(soup.find("div", class_="product__content--price").text.strip(), ',')
+            title = soup.find("div", class_="product__content--title").text.strip()
+            price = extractPrice(soup.find("div", class_="product__content--price").text.strip(), ',')
 
-        mappedSizes = []
-        sizes = soup.find("select", class_="js-variants-select").find_all("option")
-        for size in sizes:
-            try:
-                if(len(size["class"]) == 0):
-                    mappedSizes.append(size.text.strip())
-            except KeyError:
-                    continue
+            mappedSizes = []
+            sizes = soup.find("select", class_="js-variants-select").find_all("option")
+            for size in sizes:
+                try:
+                    if(len(size["class"]) == 0):
+                        if(size.text.strip()):
+                             mappedSizes.append(size.text.strip())
+                except KeyError:
+                        continue
 
-        insertIntoDb(link, title, price, price, "", mappedSizes, mappedImages)
+            insertIntoDb(link, title, price, price, "", mappedSizes, mappedImages)
+        except Exception as e: 
+            print('salomon')
+            print(link)
+            print(e)
+            print("**")
    
     elif(link['brand'] == 'mizuno'):
         print("\n\n******** mizuno *********\n\n")
@@ -416,10 +438,10 @@ def df_loops(link):
 
 df = []
 
-links = [links[i:i + 10] for i in range(0, len(links), 10)]
+links = [links[i:i + 3] for i in range(0, len(links), 3)]
 
 for chLink in links:
-    with ThreadPool(10) as pool:
+    with ThreadPool(3) as pool:
         for result in pool.map(df_loops, chLink):
             df.append(result)
     time.sleep(2)
