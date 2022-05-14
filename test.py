@@ -90,7 +90,7 @@ headers = {
 
 # try:
 s = requests.Session()
-URL = 'https://www.nike.com/tr/u/custom-nike-air-zoom-pegasus-flyease-by-you-10001267/2943873055'
+URL = 'https://www.nike.com/tr/t/court-react-vapor-nxt-sert-kort-tenis-ayakkab%C4%B1s%C4%B1-jlhjsS/CV0724-414'
 
 
 # s = requests.Session()
@@ -105,6 +105,7 @@ for script in scripts:
     if(script.text.find("INITIAL_REDUX_STATE") != -1):
         details = script.text
 fstyleNum = soup.find("li", class_="description-preview__style-color ncss-li").text.strip().replace('Stil: ', '')
+print(fstyleNum)
 styleNum = ''
 details = details.replace('window.INITIAL_REDUX_STATE=', '')
 details = details[0:-1]
@@ -117,6 +118,8 @@ if(fstyleNum not in jsonDetails['Threads']['products']):
         styleNum = urlst
     else:
         styleNum = list(jsonDetails['Threads']['products'].keys())[0]
+else: 
+    styleNum = fstyleNum
     
 print(styleNum)
 price = jsonDetails['Threads']['products'][styleNum]['currentPrice']

@@ -93,7 +93,7 @@ mydb = mysql.connector.connect(
 
 mycursor = mydb.cursor(dictionary=True)
 
-mycursor.execute("select productId, link, brandId from products where productId= 239")
+mycursor.execute("select productId, link, brandId from products")
 
 products = mycursor.fetchall()
 # print(products)
@@ -129,6 +129,8 @@ def df_loops(link):
                     styleNum = urlst
                 else:
                     styleNum = list(jsonDetails['Threads']['products'].keys())[0]
+            else: 
+                styleNum = fstyleNum
             price = jsonDetails['Threads']['products'][styleNum]['currentPrice']
             fullPrice = jsonDetails['Threads']['products'][styleNum]['fullPrice']
             allSizes = jsonDetails['Threads']['products'][styleNum]['skus']
