@@ -17,8 +17,8 @@ import pyperclip
 mydb = mysql.connector.connect(
     host="localhost",
     user="root",
-    db="annencov",
-    password="sarisco123"
+    db="annenkovstore",
+    password="kaskas"
 )
 
 mycursor = mydb.cursor(dictionary=True)
@@ -78,69 +78,31 @@ def extractPrice(price, sep='.'):
   
   return extPrice
 
-headers = {
-'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
-'Cookie': '',
-'origin': 'https://www.nike.com'
+adiheaders = {
+    'origin': 'www.adidas.com.tr',
+    'cookie': '',
+    'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36'
 }
 
-# mycursor.execute("select * from products where productId = 124")
- 
-# products = mycursor.fetchall()
-
-# try:
 s = requests.Session()
-URL = 'https://www.nike.com/tr/t/court-react-vapor-nxt-sert-kort-tenis-ayakkab%C4%B1s%C4%B1-jlhjsS/CV0724-414'
+URL = 'https://www.adidas.com.tr/tr/eq19-kosu-ayakkabisi/H00924.html'
+# styleNum = URL.split('/')[-1]
+styleNum = URL.split('/')[-1]
+styleNum = re.findall("^(.*?)\.html", styleNum)[0]
+print(styleNum)
+page = s.get(URL, headers=adiheaders, timeout=0.3)
 
-
-# s = requests.Session()
-# URL =  'https://www.timberland.com.tr/bradstreet-ultra-gri-nubuk-erkek-spor-ayakkabi-p_127238'
-page = s.get(URL)
-soup = BeautifulSoup(page.content, "html.parser")
-page = s.get(URL, headers=headers)
 soup = BeautifulSoup(page.content, "html.parser")
 scripts = soup.find_all("script")
 details = ''
 for script in scripts:
-    if(script.text.find("INITIAL_REDUX_STATE") != -1):
-        details = script.text
-fstyleNum = soup.find("li", class_="description-preview__style-color ncss-li").text.strip().replace('Stil: ', '')
-print(fstyleNum)
-styleNum = ''
-details = details.replace('window.INITIAL_REDUX_STATE=', '')
-details = details[0:-1]
-pyperclip.copy(details)
-jsonDetails = json.loads(details)
-if(fstyleNum not in jsonDetails['Threads']['products']):
-    urlst = URL.split('/')[-1]
-    print(urlst)
-    if(urlst in jsonDetails['Threads']['products']):
-        styleNum = urlst
-    else:
-        styleNum = list(jsonDetails['Threads']['products'].keys())[0]
-else: 
-    styleNum = fstyleNum
-    
-print(styleNum)
-price = jsonDetails['Threads']['products'][styleNum]['currentPrice']
-print(price)
-fullPrice = jsonDetails['Threads']['products'][styleNum]['fullPrice']
-allSizes = jsonDetails['Threads']['products'][styleNum]['skus']
-availableSizes = jsonDetails['Threads']['products'][styleNum]['availableSkus']
-availableSizesInNumber = []
-for size in allSizes:
-    for asize in availableSizes:
-        if(size['skuId'] == asize['id']):
-            availableSizesInNumber.append(size['localizedSize'])
-price = extractPrice(str(price), ',')
-fullPrice = extractPrice(str(fullPrice), ',')
-# print(mappedSizes)
-# print(title)
-print(price)
-# print(mappedImages)
-# except Exception as e: 
-#     # f.write(str(link['link']) + '\n')
-#     # print(link)
-#     print(e)
-#     # print("**")
+    if (script.text.find("@context") != -1):
+      details = script.text
+# print(details)
+details = json.loads(details)
+print(details)
+sizes = requests.get("https://www.adidas.com.tr/api/products/"+ styleNum + "/availability?sitePath=en", headers=adiheaders)
+filtered = list(filter(lambda var: var["availability_status"] == "IN_STOCK", sizes.json()["variation_list"]))
+mappedSizes = list(map(lambda x: x["size"], filtered))
+price = extractPrice(str(details["offers"]["price"]))
 

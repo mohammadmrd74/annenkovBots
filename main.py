@@ -61,15 +61,17 @@ def insertIntoDb(link, title, price, totalPrice, styleNum, availableSizesInNumbe
 mydb = mysql.connector.connect(
     host="localhost",
     user="root",
-    db="annencov",
-    password="sarisco123"
+    db="annenkovstore",
+    password="kaskas"
 )
+print(mydb)
 
 mycursor = mydb.cursor(dictionary=True)
 
 mycursor.execute("select * from links where inserted = 0")
 
 links = mycursor.fetchall()
+print(links)
 # print(links)
 def df_loops(link):
     if(link['brand'] == 'nike' or link['brand'] == 'nike jordan'):
@@ -206,7 +208,9 @@ def df_loops(link):
     elif(link['brand'] == 'adidas'):
         print("\n\n******** ADIDAS *********\n\n")
         adiheaders = {
-          'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'
+          'origin': 'www.adidas.com.tr',
+          'cookie': '',
+          'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36'
         }
         URL = link['link']
         try:
@@ -228,7 +232,7 @@ def df_loops(link):
             mappedSizes = list(map(lambda x: x["size"], filtered))
             price = extractPrice(str(details["offers"]["price"]))
 
-            insertIntoDb(link, details["name"],price, price, styleNum, mappedSizes, details["image"])
+            insertIntoDb(link, details["name"].replace('Ayakkabı', ''),price, price, styleNum, mappedSizes, details["image"])
         except Exception as e: 
             print(link['link'])
             print(e)

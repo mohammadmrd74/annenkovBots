@@ -12,7 +12,7 @@ sem = threading.Semaphore()
 sem1 = threading.Semaphore()
 
 path = os.path.abspath(os.getcwd())
-print(path)
+
 
 f = open(path + "/errorLinks.txt", "a")
 
@@ -79,16 +79,21 @@ def updateDb(productId, price, totalPrice, sizes):
 def disableProduct(id):
     print('disableProduct', id)
     sem.acquire()
-    mycursor.execute("UPDATE products SET active=0 where productId = %s", [id])
-    mydb.commit()
+    try:
+        mycursor.execute("UPDATE products SET active=0 where productId = %s", [id])
+        mydb.commit()
+    except Exception as e: 
+        print(e)
+        f.write("disableProduct error\n")
     sem.release()
+    print('disableProduct rel', id)
 
 
 mydb = mysql.connector.connect(
     host="localhost",
     user="root",
-    db="annencov",
-    password="sarisco123"
+    db="annenkovstore",
+    password="kaskas"
 )
 
 mycursor = mydb.cursor(dictionary=True)
@@ -110,7 +115,7 @@ def df_loops(link):
             
             s = requests.Session()
             URL = link['link']
-            page = s.get(URL, headers=headers)
+            page = s.get(URL, headers=headers, timeout=10)
             soup = BeautifulSoup(page.content, "html.parser")
             scripts = soup.find_all("script")
             details = ''
@@ -157,14 +162,14 @@ def df_loops(link):
         try:
             s = requests.Session()
             URL = link['link']
-            page = s.get(URL)
+            page = s.get(URL, timeout=10)
             soup = BeautifulSoup(page.content, "html.parser")
             product = soup.find_all("h1", class_="emos_H1")
             price = soup.find(id="ctl00_u23_ascUrunDetay_dtUrunDetay_ctl00_lblSatisFiyat").text.strip()
             cloudId = URL.split("/")[-1]
             cloudId = cloudId.split("-")[-1].replace(".html", "")
             extPrice = extractPrice(price)
-            sizes = page = s.get("https://www.newbalance.com.tr/usercontrols/urunDetay/ajxUrunSecenek.aspx?urn="+cloudId+"&fn=dty&std=True&type=scd1&index=0&objectId=ctl00_u23_ascUrunDetay_dtUrunDetay_ctl00&runatId=urunDetay&scd1=0&lang=tr-TR")
+            sizes = page = s.get("https://www.newbalance.com.tr/usercontrols/urunDetay/ajxUrunSecenek.aspx?urn="+cloudId+"&fn=dty&std=True&type=scd1&index=0&objectId=ctl00_u23_ascUrunDetay_dtUrunDetay_ctl00&runatId=urunDetay&scd1=0&lang=tr-TR", timeout=10)
             soup = BeautifulSoup(page.content, "html.parser")
             realSizes = []
             sizes = soup.find_all("a")
@@ -196,7 +201,7 @@ def df_loops(link):
         try:
             s = requests.Session()
             URL = link['link']
-            page = s.get(URL)
+            page = s.get(URL, timeout=10)
             soup = BeautifulSoup(page.content, "html.parser")
 
             price = soup.find_all("span", class_="gl-price__value")
@@ -225,7 +230,9 @@ def df_loops(link):
         print(link)
         print("\n\n******** ADIDAS *********\n\n")
         adiheaders = {
-          'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'
+          'origin': 'www.adidas.com.tr',
+          'cookie': '',
+          'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36'
         }
         s = requests.Session()
         URL = link['link']
@@ -233,7 +240,7 @@ def df_loops(link):
         try:
             styleNum = URL.split('/')[-1]
             styleNum = re.findall("^(.*?)\.html", styleNum)[0]
-            page = s.get(URL, headers=adiheaders)
+            page = s.get(URL, headers=adiheaders, timeout=10)
             soup = BeautifulSoup(page.content, "html.parser")
             scripts = soup.find_all("script")
             details = ''
@@ -242,7 +249,7 @@ def df_loops(link):
                     details = script.text
             # print(details)
             details = json.loads(details)
-            sizes = requests.get("https://www.adidas.com.tr/api/products/"+ styleNum + "/availability?sitePath=en", headers=adiheaders)
+            sizes = requests.get("https://www.adidas.com.tr/api/products/"+ styleNum + "/availability?sitePath=en", headers=adiheaders, timeout=10)
             filtered = list(filter(lambda var: var["availability_status"] == "IN_STOCK", sizes.json()["variation_list"]))
             mappedSizes = list(map(lambda x: x["size"], filtered))
             price = extractPrice(str(details["offers"]["price"]))
@@ -265,7 +272,7 @@ def df_loops(link):
         try:
             s = requests.Session()
             URL = link['link']
-            page = s.get(URL)
+            page = s.get(URL, timeout=10)
             soup = BeautifulSoup(page.content, "html.parser")
 
             price = extractPrice(soup.find("span", class_="price").text.strip())
@@ -303,7 +310,7 @@ def df_loops(link):
         try:
             s = requests.Session()
             URL = link['link']
-            page = s.get(URL)
+            page = s.get(URL, timeout=10)
             soup = BeautifulSoup(page.content, "html.parser")
 
             price = extractPrice(soup.find("span", class_="pPrice").text.strip())
@@ -315,6 +322,8 @@ def df_loops(link):
                     mappedSizes.append(size.text.strip())
                 except KeyError:
                     continue
+            updateDb(link['productId'], price, price, mappedSizes)
+            
         except Exception as e: 
             disableProduct(link['productId'])
             f.write(str(link['link']) + '\n')
@@ -322,7 +331,6 @@ def df_loops(link):
             print(e)
             print("**")
 
-        updateDb(link['productId'], price, price, mappedSizes)
       
     elif(link['brandId'] == 7):
         print("\n\n******** salomon *********\n\n")
@@ -334,7 +342,7 @@ def df_loops(link):
         try:
             s = requests.Session()
             URL = link['link']
-            page = s.get(URL)
+            page = s.get(URL, timeout=10)
             soup = BeautifulSoup(page.content, "html.parser")
 
             price = extractPrice(soup.find("div", class_="product__content--price").text.strip(), ',')
@@ -367,7 +375,7 @@ def df_loops(link):
         try: 
             s = requests.Session()
             URL = link['link']
-            page = s.get(URL)
+            page = s.get(URL, timeout=10)
             soup = BeautifulSoup(page.content, "html.parser")
             sizes = soup.find_all("div", class_="pos-r fl col-12 ease variantList var-new")[0]
             realSize = sizes.find_all("a")
@@ -394,7 +402,7 @@ def df_loops(link):
         try:
             s = requests.Session()
             URL = link['link']
-            page = s.get(URL)
+            page = s.get(URL, timeout=10)
             soup = BeautifulSoup(page.content, "html.parser")
             
             price = extractPrice(soup.find("span", class_="one-price").text.strip())
@@ -419,14 +427,14 @@ def df_loops(link):
 
 df = []
 random.shuffle(products)
-print(products)
 links = [products[i:i + 10] for i in range(0, len(products), 10)]
 
 for chLink in links:
     with ThreadPool(10) as pool:
         for result in pool.map(df_loops, chLink):
             df.append(result)
-    time.sleep(3)
+    print('LOOOOOOOOOOOOP')
+    time.sleep(2)
 
 print(df)
 f.close()
