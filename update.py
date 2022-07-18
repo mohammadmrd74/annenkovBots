@@ -90,7 +90,7 @@ def disableProduct(id):
 
 
 mydb = mysql.connector.connect(
-    host="localhost",
+    host="171.22.24.215",
     user="root",
     db="annenkovstore",
     password="kaskas"

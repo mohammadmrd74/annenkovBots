@@ -15,7 +15,7 @@ path = os.path.abspath(os.getcwd())
 print(path)
 
 mydb = mysql.connector.connect(
-    host="localhost",
+    host="171.22.24.215",
     user="root",
     db="annenkovstore",
     password="kaskas"
@@ -102,6 +102,7 @@ def df_loops(id):
 
     link = mycursor.fetchall()
     link = link[0]
+    print(link)
     if(link['brandId'] == 1 or link['brandId'] == 23):
         print("\n\n******** NIKE *********\n\n")
         headers = {
@@ -431,7 +432,7 @@ def df_loops(id):
 
     mycursor.execute("SELECT * from products where productId = %s", [link["productId"]])
     productupdate = mycursor.fetchall()
-
+    print('ended')
     if (sucess == False): return False;
     return productupdate[0]
            
