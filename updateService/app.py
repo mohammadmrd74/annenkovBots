@@ -8,3 +8,7 @@ app = Flask(__name__)
 def hello_world():
     updateproduct = df_loops(request.args.get('productId'))
     return updateproduct
+
+if __name__ == "__main__":
+    from waitress import serve
+    serve(app, host="0.0.0.0", port=5000)
