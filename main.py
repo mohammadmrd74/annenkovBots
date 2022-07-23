@@ -49,7 +49,7 @@ def insertIntoDb(link, title, price, totalPrice, styleNum, availableSizesInNumbe
             mycursor.execute("INSERT INTO images(imageUrl, productId) VALUES (%s, %s)", [image, insertedId])
             mydb.commit()
 
-        mycursor.execute("UPDATE links SET inserted=%s where id = %s", [1, link['id']])
+        mycursor.execute("UPDATE links SET inserted=%s and link != null where id = %s", [1, link['id']])
         mydb.commit()
         sem.release()
     except Exception as e: 
@@ -75,7 +75,7 @@ print(links)
 # print(links)
 def df_loops(link):
     if(link['brand'] == 'nike' or link['brand'] == 'jordan'):
-        print("\n\n******** NIKE *********\n\n")
+        print("\n\n******** "+ link['brand'] +" *********\n\n")
         headers = {
         'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
         'Cookie': '',
@@ -87,20 +87,25 @@ def df_loops(link):
             URL = link['link']
             page = s.get(URL.strip(), headers=headers)
             soup = BeautifulSoup(page.content, "html.parser")
-            print(soup)
+            # print(soup)
             scripts = soup.find_all("script")
             details = ''
             for script in scripts:
                 if(script.text.find("INITIAL_REDUX_STATE") != -1):
                     details = script.text
-            fstyleNum = soup.find("li", class_="description-preview__style-color ncss-li").text.strip().replace('Stil: ', '')
+            fstyleNum = ''
+            try:
+                fstyleNum = soup.find("li", class_="description-preview__style-color ncss-li").text.strip().replace('Stil: ', '')
+            except Exception as e:
+                print('rad mikone') 
+                print(e)
             styleNum = fstyleNum
             details = details.replace('window.INITIAL_REDUX_STATE=', '')
             details = details[0:-1]
             jsonDetails = json.loads(details)
+            print(fstyleNum)
             if(fstyleNum not in jsonDetails['Threads']['products']):
                 urlst = URL.strip().split('/')[-1]
-                print(urlst)
                 if(urlst in jsonDetails['Threads']['products']):
                     styleNum = urlst
                 else:
@@ -113,14 +118,16 @@ def df_loops(link):
             allSizes = jsonDetails['Threads']['products'][styleNum]['skus']
             availableSizes = jsonDetails['Threads']['products'][styleNum]['availableSkus']
             title = jsonDetails['Threads']['products'][styleNum]['title']
+            print(122)
             availableSizesInNumber = []
             for size in allSizes:
                 for asize in availableSizes:
                     if(size['skuId'] == asize['id']):
                         availableSizesInNumber.append(size['localizedSize'])
+            print(123)
             price = extractPrice(str(price), ',')
             fullPrice = extractPrice(str(fullPrice), ',')
-
+            print(124)
             insertIntoDb(link, title, fullPrice, price, fstyleNum, availableSizesInNumber, mappedImages)
         except Exception as e: 
             print(link['link'])
@@ -455,10 +462,10 @@ def df_loops(link):
 
 df = []
 
-links = [links[i:i + 3] for i in range(0, len(links), 3)]
+links = [links[i:i + 10] for i in range(0, len(links), 10)]
 
 for chLink in links:
-    with ThreadPool(3) as pool:
+    with ThreadPool(10) as pool:
         for result in pool.map(df_loops, chLink):
             df.append(result)
     time.sleep(2)

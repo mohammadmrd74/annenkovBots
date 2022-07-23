@@ -1,9 +1,3 @@
-from joblib import PrintTime
-from matplotlib import style
-from matplotlib.style import available
-from numpy import size
-import decimal
-from regex import P
 import requests
 import mysql.connector
 from bs4 import BeautifulSoup
@@ -65,9 +59,10 @@ def updateDb(productId, price, totalPrice, sizes):
         sem.release()
 
 def insertIntoDb(link, title, price, totalPrice, styleNum, availableSizesInNumber, mappedImages):
+    print(link)
     sem.acquire()
     try:
-        mycursor.execute("SELECT id from brands where brandName = 'adidas'")
+        mycursor.execute("SELECT id from brands where brandName = 'nike'")
         brandId = mycursor.fetchall()
         sql = "INSERT INTO products (title, price, totalPrice, styleNumber, currencyId, brandId, mainAndCategoryId, typeId, linkId, link, colorId, sColorId) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
         val = (title, price, totalPrice, styleNum, 1, brandId[0]['id'], 4, 1, 1, link,3, 2)
@@ -109,6 +104,23 @@ def extractPrice(price, sep='.'):
       extPrice = int(extPrice.split(',')[0]) + 1
   
   return extPrice
+
+mydb = mysql.connector.connect(
+    host="171.22.24.215",
+    user="root",
+    db="annenkovstore",
+    password="kaskas"
+)
+print(mydb)
+
+mycursor = mydb.cursor(dictionary=True)
+
+mycursor.execute("select * from links where id = 769")
+import os
+links = mycursor.fetchall()
+path = os.path.abspath(os.getcwd())
+f = open(path + "/ttt.txt", "a")
+
 s = requests.Session()
 
 headers = {
@@ -116,10 +128,13 @@ headers = {
         'Cookie': '',
         'origin': 'https://www.nike.com'
         }
-URL = "https://www.nike.com/tr/t/court-zoom-nxt-sert-kort-tenis-ayakkab%C4%B1s%C4%B1-s7vtzg/DH0219-410"
+print('https://www.nike.com/tr/t/air-zoom-rival-fly-3-yol-yar%C4%B1%C5%9F-ayakkab%C4%B1s%C4%B1-sTqqkg/CT2405-358')
+print(links[0]['link'])
+print('https://www.nike.com/tr/t/air-zoom-rival-fly-3-yol-yar%C4%B1%C5%9F-ayakkab%C4%B1s%C4%B1-sTqqkg/CT2405-358' == links[0]['link'])
+URL = links[0]['link']
 page = s.get(URL.strip(), headers=headers)
-print(page)
 soup = BeautifulSoup(page.content, "html.parser")
+# f.write(page.text)
 scripts = soup.find_all("script")
 details = ''
 for script in scripts:
@@ -131,7 +146,7 @@ fstyleNum = soup.find("li", class_="description-preview__style-color ncss-li").t
 styleNum = fstyleNum
 details = details.replace('window.INITIAL_REDUX_STATE=', '')
 details = details[0:-1]
-pyperclip.copy(details)
+# pyperclip.copy(details)
 jsonDetails = json.loads(details)
 if(fstyleNum not in jsonDetails['Threads']['products']):
     print(fstyleNum)
@@ -160,4 +175,6 @@ price = extractPrice(str(price), ',')
 fullPrice = extractPrice(str(fullPrice), ',')
 print(price)
 print(fullPrice)
+
+# insertIntoDb(URL, title, fullPrice, price, fstyleNum, availableSizesInNumber, mappedImages)
 
