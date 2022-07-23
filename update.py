@@ -123,7 +123,7 @@ def df_loops(link):
                 if(script.text.find("INITIAL_REDUX_STATE") != -1):
                     details = script.text
             fstyleNum = soup.find("li", class_="description-preview__style-color ncss-li").text.strip().replace('Stil: ', '')
-            styleNum = ''
+            styleNum = fstyleNum
             details = details.replace('window.INITIAL_REDUX_STATE=', '')
             details = details[0:-1]
             jsonDetails = json.loads(details)

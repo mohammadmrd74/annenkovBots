@@ -53,7 +53,7 @@ def insertIntoDb(link, title, price, totalPrice, styleNum, availableSizesInNumbe
         mydb.commit()
         sem.release()
     except Exception as e: 
-        print("error")
+        print("error insert")
         print(link)
         print(e)
         sem.release()
@@ -74,7 +74,7 @@ links = mycursor.fetchall()
 print(links)
 # print(links)
 def df_loops(link):
-    if(link['brand'] == 'nike' or link['brand'] == 'nike jordan'):
+    if(link['brand'] == 'nike' or link['brand'] == 'jordan'):
         print("\n\n******** NIKE *********\n\n")
         headers = {
         'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
@@ -85,20 +85,21 @@ def df_loops(link):
         try:
             s = requests.Session()
             URL = link['link']
-            page = s.get(URL, headers=headers)
+            page = s.get(URL.strip(), headers=headers)
             soup = BeautifulSoup(page.content, "html.parser")
+            print(soup)
             scripts = soup.find_all("script")
             details = ''
             for script in scripts:
                 if(script.text.find("INITIAL_REDUX_STATE") != -1):
                     details = script.text
             fstyleNum = soup.find("li", class_="description-preview__style-color ncss-li").text.strip().replace('Stil: ', '')
-            styleNum = ''
+            styleNum = fstyleNum
             details = details.replace('window.INITIAL_REDUX_STATE=', '')
             details = details[0:-1]
             jsonDetails = json.loads(details)
             if(fstyleNum not in jsonDetails['Threads']['products']):
-                urlst = URL.split('/')[-1]
+                urlst = URL.strip().split('/')[-1]
                 print(urlst)
                 if(urlst in jsonDetails['Threads']['products']):
                     styleNum = urlst
@@ -131,12 +132,12 @@ def df_loops(link):
         
         s = requests.Session()
         URL = link['link']
-        page = s.get(URL)
+        page = s.get(URL.strip())
         soup = BeautifulSoup(page.content, "html.parser")
         product = soup.find_all("h1", class_="emos_H1")
         title = product[0].text.strip()
         price = soup.find(id="ctl00_u23_ascUrunDetay_dtUrunDetay_ctl00_lblSatisFiyat").text.strip()
-        cloudId = URL.split("/")[-1]
+        cloudId = URL.strip().split("/")[-1]
         cloudId = cloudId.split("-")[-1].replace(".html", "")
         extPrice = extractPrice(price)
         styleNum = soup.find("div", class_="ems-prd-sort-desc").text.strip()
@@ -176,7 +177,7 @@ def df_loops(link):
 
         s = requests.Session()
         URL = link['link']
-        page = s.get(URL)
+        page = s.get(URL.strip())
         soup = BeautifulSoup(page.content, "html.parser")
 
         images = soup.find_all("img", class_="image-blur")
@@ -213,10 +214,13 @@ def df_loops(link):
           'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36'
         }
         URL = link['link']
+        
         try:
             styleNum = URL.split('/')[-1]
             styleNum = re.findall("^(.*?)\.html", styleNum)[0]
-            page = requests.get(URL, headers=adiheaders)
+            print(URL)
+            page = requests.get(URL.strip(), headers=adiheaders)
+            print(page)
             soup = BeautifulSoup(page.content, "html.parser")
             scripts = soup.find_all("script")
             # for sc in script:
@@ -231,6 +235,7 @@ def df_loops(link):
             filtered = list(filter(lambda var: var["availability_status"] == "IN_STOCK", sizes.json()["variation_list"]))
             mappedSizes = list(map(lambda x: x["size"], filtered))
             price = extractPrice(str(details["offers"]["price"]))
+            print(price)
 
             insertIntoDb(link, details["name"].replace('Ayakkabı', ''),price, price, styleNum, mappedSizes, details["image"])
         except Exception as e: 
@@ -249,7 +254,7 @@ def df_loops(link):
         try:
             s = requests.Session()
             URL = link['link']
-            page = s.get(URL)
+            page = s.get(URL.strip())
             soup = BeautifulSoup(page.content, "html.parser")
 
             images = soup.find_all("img", class_="gallery-item__img")
@@ -299,7 +304,7 @@ def df_loops(link):
         try:
             s = requests.Session()
             URL = link['link']
-            page = s.get(URL)
+            page = s.get(URL.strip())
             soup = BeautifulSoup(page.content, "html.parser")
 
             images = soup.find("div", class_="swiper-wrapper").find_all("img", class_="swiper-lazy")
@@ -342,7 +347,7 @@ def df_loops(link):
         try:
             s = requests.Session()
             URL = link['link']
-            page = s.get(URL)
+            page = s.get(URL.strip())
             soup = BeautifulSoup(page.content, "html.parser")
 
             images = soup.find_all("img", class_="js-fancybox-lg")
@@ -385,7 +390,7 @@ def df_loops(link):
 
         s = requests.Session()
         URL = link['link']
-        page = s.get(URL)
+        page = s.get(URL.strip())
         soup = BeautifulSoup(page.content, "html.parser")
         product = soup.find(id="productDetail")
         tags = product.find(id="pageContent")
@@ -417,7 +422,7 @@ def df_loops(link):
 
         s = requests.Session()
         URL =  link['link']
-        page = s.get(URL)
+        page = s.get(URL.strip())
         soup = BeautifulSoup(page.content, "html.parser")
 
         images = soup.find("div", class_="main-gallery").find_all("img", class_="image-blur")
