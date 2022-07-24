@@ -49,7 +49,7 @@ def insertIntoDb(link, title, price, totalPrice, styleNum, availableSizesInNumbe
             mycursor.execute("INSERT INTO images(imageUrl, productId) VALUES (%s, %s)", [image, insertedId])
             mydb.commit()
 
-        mycursor.execute("UPDATE links SET inserted=%s and link != null where id = %s", [1, link['id']])
+        mycursor.execute("UPDATE links SET inserted=%s where id = %s", [1, link['id']])
         mydb.commit()
         sem.release()
     except Exception as e: 
@@ -64,14 +64,12 @@ mydb = mysql.connector.connect(
     db="annenkovstore",
     password="kaskas"
 )
-print(mydb)
 
 mycursor = mydb.cursor(dictionary=True)
 
-mycursor.execute("select * from links where inserted = 0")
+mycursor.execute("select * from links where inserted is null and brand = 'jordan'")
 
 links = mycursor.fetchall()
-print(links)
 # print(links)
 def df_loops(link):
     if(link['brand'] == 'nike' or link['brand'] == 'jordan'):
@@ -83,22 +81,58 @@ def df_loops(link):
         }
 
         try:
-            s = requests.Session()
             URL = link['link']
-            page = s.get(URL.strip(), headers=headers)
+            s = requests.Session()
+            page = s.get(URL, headers=headers)
+            print(page)
             soup = BeautifulSoup(page.content, "html.parser")
-            # print(soup)
-            scripts = soup.find_all("script")
+            print(soup.find("li", class_="description-preview__style-color ncss-li"))
+            # f.write(page.text)
+            scripts = ''
+            if (soup.find("li", class_="description-preview__style-color ncss-li") == None):
+                print('first try')
+                time.sleep(2)
+                s = requests.Session()
+                page = s.get(URL, headers=headers)
+                soup = BeautifulSoup(page.content, "html.parser")
+                scripts = soup.find_all("script")
+                if (soup.find("li", class_="description-preview__style-color ncss-li") == None):
+                    print('second try')
+                    time.sleep(2)
+                    s = requests.Session()
+                    page = s.get(URL, headers=headers)
+                    soup = BeautifulSoup(page.content, "html.parser")
+                    scripts = soup.find_all("script")
+                    if (soup.find("li", class_="description-preview__style-color ncss-li") == None):
+                        print('third try')
+                        time.sleep(4)
+                        s = requests.Session()
+                        page = s.get(URL, headers=headers)
+                        soup = BeautifulSoup(page.content, "html.parser")
+                        scripts = soup.find_all("script")
+                        if (soup.find("li", class_="description-preview__style-color ncss-li") == None):
+                            print('forth try')
+                            time.sleep(6)
+                            s = requests.Session()
+                            page = s.get(URL, headers=headers)
+                            soup = BeautifulSoup(page.content, "html.parser")
+                            scripts = soup.find_all("script")
+                            if (soup.find("li", class_="description-preview__style-color ncss-li") == None):
+                                print('5 try')
+                                time.sleep(3)
+                                s = requests.Session()
+                                page = s.get(URL, headers=headers)
+                                soup = BeautifulSoup(page.content, "html.parser")
+                                scripts = soup.find_all("script")
+            else: scripts = soup.find_all("script")
             details = ''
+            print(12421421)
             for script in scripts:
                 if(script.text.find("INITIAL_REDUX_STATE") != -1):
                     details = script.text
-            fstyleNum = ''
-            try:
-                fstyleNum = soup.find("li", class_="description-preview__style-color ncss-li").text.strip().replace('Stil: ', '')
-            except Exception as e:
-                print('rad mikone') 
-                print(e)
+            fstyleNum = soup.find("li", class_="description-preview__style-color ncss-li").text.strip().replace('Stil: ', '')
+
+                    
             styleNum = fstyleNum
             details = details.replace('window.INITIAL_REDUX_STATE=', '')
             details = details[0:-1]
@@ -471,7 +505,6 @@ for chLink in links:
     time.sleep(2)
 
 print(df)
-
 
 
     

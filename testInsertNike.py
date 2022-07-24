@@ -3,7 +3,7 @@ import mysql.connector
 from bs4 import BeautifulSoup
 import threading
 sem = threading.Semaphore()
-
+import time
 import json
 import re
 import pyperclip
@@ -115,7 +115,7 @@ print(mydb)
 
 mycursor = mydb.cursor(dictionary=True)
 
-mycursor.execute("select * from links where id = 769")
+mycursor.execute("select * from links where id = 857")
 import os
 links = mycursor.fetchall()
 path = os.path.abspath(os.getcwd())
@@ -125,17 +125,46 @@ s = requests.Session()
 
 headers = {
         'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
-        'Cookie': '',
+        'cookie': '',
         'origin': 'https://www.nike.com'
         }
 print('https://www.nike.com/tr/t/air-zoom-rival-fly-3-yol-yar%C4%B1%C5%9F-ayakkab%C4%B1s%C4%B1-sTqqkg/CT2405-358')
 print(links[0]['link'])
 print('https://www.nike.com/tr/t/air-zoom-rival-fly-3-yol-yar%C4%B1%C5%9F-ayakkab%C4%B1s%C4%B1-sTqqkg/CT2405-358' == links[0]['link'])
 URL = links[0]['link']
-page = s.get(URL.strip(), headers=headers)
+page = s.get(URL, headers=headers)
 soup = BeautifulSoup(page.content, "html.parser")
 # f.write(page.text)
-scripts = soup.find_all("script")
+
+if (soup.find("li", class_="description-preview__style-color ncss-li") == None):
+    print('first try')
+    time.sleep(2)
+    s = requests.Session()
+    page = s.get(URL, headers=headers)
+    soup = BeautifulSoup(page.content, "html.parser")
+    scripts = soup.find_all("script")
+    if (soup.find("li", class_="description-preview__style-color ncss-li") == None):
+        print('second try')
+        time.sleep(2)
+        s = requests.Session()
+        page = s.get(URL, headers=headers)
+        soup = BeautifulSoup(page.content, "html.parser")
+        scripts = soup.find_all("script")
+        if (soup.find("li", class_="description-preview__style-color ncss-li") == None):
+            print('third try')
+            time.sleep(2)
+            s = requests.Session()
+            page = s.get(URL, headers=headers)
+            soup = BeautifulSoup(page.content, "html.parser")
+            scripts = soup.find_all("script")
+            if (soup.find("li", class_="description-preview__style-color ncss-li") == None):
+                print('forth try')
+                time.sleep(2)
+                s = requests.Session()
+                page = s.get(URL, headers=headers)
+                soup = BeautifulSoup(page.content, "html.parser")
+                scripts = soup.find_all("script")
+
 details = ''
 for script in scripts:
     if(script.text.find("INITIAL_REDUX_STATE") != -1):
