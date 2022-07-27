@@ -64,6 +64,23 @@ def updateDb(productId, price, totalPrice, sizes):
         print(e)
         sem.release()
 
+def insertIntoDb(link, title, price, totalPrice, styleNum, availableSizesInNumber, mappedImages):
+    sem.acquire()
+    try:
+        mycursor.execute("SELECT id from brands where brandName = 'salomon'")
+        brandId = mycursor.fetchall()
+        sql = "INSERT INTO products (title, price, totalPrice, styleNumber, currencyId, brandId, mainAndCategoryId, typeId, linkId, link, colorId, sColorId) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        val = (title, price, totalPrice, styleNum, 1, brandId[0]['id'], 4, 1, 1, link,3, 2)
+        mycursor.execute(sql, val)
+
+        mydb.commit()
+        sem.release()
+    except Exception as e: 
+        print("error")
+        print(link)
+        print(e)
+        sem.release()
+
 
 def extractPrice(price, sep='.'):
   r = re.compile(r'(\d[\d.,]*)\b')
@@ -78,31 +95,37 @@ def extractPrice(price, sep='.'):
   
   return extPrice
 
-adiheaders = {
-    'origin': 'www.adidas.com.tr',
-    'cookie': '',
-    'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36'
+
+
+
+print("\n\n******** salomon *********\n\n")
+headers = {
+'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
+'Cookie': ''
 }
 
 s = requests.Session()
-URL = 'https://www.adidas.com.tr/tr/terrex-ax4-primegreen-yuruyus-ayakkabisi/FZ3255.html'
-# styleNum = URL.split('/')[-1]
-styleNum = URL.split('/')[-1]
-styleNum = re.findall("^(.*?)\.html", styleNum)[0]
-print(styleNum)
-page = s.get(URL, headers=adiheaders, timeout=10)
-
+URL = "https://www.salomon.com.tr/xa-collider-2-gore-tex-kadin-outdoor-ayakkabi-l41433800"
+page = s.get(URL.strip())
 soup = BeautifulSoup(page.content, "html.parser")
-scripts = soup.find_all("script")
-details = ''
-for script in scripts:
-    if (script.text.find("@context") != -1):
-      details = script.text
-# print(details)
-details = json.loads(details)
-print(details)
-sizes = requests.get("https://www.adidas.com.tr/api/products/"+ styleNum + "/availability?sitePath=en", headers=adiheaders)
-filtered = list(filter(lambda var: var["availability_status"] == "IN_STOCK", sizes.json()["variation_list"]))
-mappedSizes = list(map(lambda x: x["size"], filtered))
-price = extractPrice(str(details["offers"]["price"]))
 
+images = soup.find_all("img", class_="cloudzoom")
+mappedImages = []
+for image in images:
+    try:
+        if(image["src"]):
+            mappedImages.append("https://www.salomon.com.tr/" + image["src"])
+    except KeyError:
+            continue
+
+
+title = soup.find("div", class_="ProductName").text.strip()
+price = extractPrice(soup.find("span", class_="spanFiyat").text.strip(), '.')
+styleNum = soup.find("span", class_="productcode").text.strip().replace('(', '').replace(')','')
+mappedSizes = []
+scripts = soup.find("body").find_all("script")[0].text.strip()
+pyperclip.copy(scripts[scripts.find('{'):(scripts.find(';'))])
+scripts = json.loads(scripts[scripts.find('{'):(scripts.find(';'))])
+filtered = list(filter(lambda var: var["stokAdedi"] > 0 and var["ekSecenekTipiTanim"] == "Beden", scripts["productVariantData"]))
+sizes = list(map(lambda x: x["tanim"][x["tanim"].find('(')+1:x["tanim"].find(')')], filtered))
+print(sizes)

@@ -67,7 +67,7 @@ mydb = mysql.connector.connect(
 
 mycursor = mydb.cursor(dictionary=True)
 
-mycursor.execute("select * from links where inserted is null and brand = 'jordan'")
+mycursor.execute("select * from links where inserted = 0 and brand = 'adidas'")
 
 links = mycursor.fetchall()
 # print(links)
@@ -162,7 +162,7 @@ def df_loops(link):
             price = extractPrice(str(price), ',')
             fullPrice = extractPrice(str(fullPrice), ',')
             print(124)
-            insertIntoDb(link, title, fullPrice, price, fstyleNum, availableSizesInNumber, mappedImages)
+            insertIntoDb(link, title, fullPrice + 60, price + 60, fstyleNum, availableSizesInNumber, mappedImages)
         except Exception as e: 
             print(link['link'])
             print(e)
@@ -302,7 +302,9 @@ def df_loops(link):
             mappedImages = []
             for image in images:
                 try:
-                    if(image["src"]):
+                    if(image["src"] and  not image.has_attr("data-lazy") ):
+                        mappedImages.append(image["src"])
+                    elif(image["data-lazy"]):
                         mappedImages.append(image["data-lazy"])
                 except KeyError:
                     continue
@@ -326,10 +328,9 @@ def df_loops(link):
                     if(founded["products"].count(pr) != 0):
                         foundedSizes.append(size["label"])
             
-            print(link, title.replace('Ayakkabı', ''), price, price, styleNum, foundedSizes, mappedImages)
             insertIntoDb(link, title.replace('Ayakkabı', ''), price, price, styleNum, foundedSizes, mappedImages)
         except Exception as e: 
-            print('asics')
+            print('puma')
             print(link)
             print(e)
             print("**")
@@ -391,30 +392,25 @@ def df_loops(link):
             page = s.get(URL.strip())
             soup = BeautifulSoup(page.content, "html.parser")
 
-            images = soup.find_all("img", class_="js-fancybox-lg")
+            images = soup.find_all("img", class_="cloudzoom")
             mappedImages = []
             for image in images:
                 try:
                     if(image["src"]):
-                        mappedImages.append(image["data-fancybox-image-lg"])
+                        mappedImages.append("https://www.salomon.com.tr/" + image["src"])
                 except KeyError:
                         continue
 
 
-            title = soup.find("div", class_="product__content--title").text.strip()
-            price = extractPrice(soup.find("div", class_="product__content--price").text.strip(), ',')
+            title = soup.find("div", class_="ProductName").text.strip()
+            price = extractPrice(soup.find("span", class_="spanFiyat").text.strip(), '.')
+            styleNum = soup.find("span", class_="productcode").text.strip().replace('(', '').replace(')','')
+            scripts = soup.find("body").find_all("script")[0].text.strip()
+            scripts = json.loads(scripts[scripts.find('{'):(scripts.find(';'))])
+            filtered = list(filter(lambda var: var["stokAdedi"] > 0 and var["ekSecenekTipiTanim"] == "Beden", scripts["productVariantData"]))
+            sizes = list(map(lambda x: x["tanim"][x["tanim"].find('(')+1:x["tanim"].find(')')], filtered))
 
-            mappedSizes = []
-            sizes = soup.find("select", class_="js-variants-select").find_all("option")
-            for size in sizes:
-                try:
-                    if(len(size["class"]) == 0):
-                        if(size.text.strip()):
-                             mappedSizes.append(size.text.strip())
-                except KeyError:
-                        continue
-
-            insertIntoDb(link, title, price, price, "", mappedSizes, mappedImages)
+            insertIntoDb(link, title, price, price, styleNum, sizes, mappedImages)
         except Exception as e: 
             print('salomon')
             print(link)
@@ -460,35 +456,47 @@ def df_loops(link):
         'Cookie': ''
         }
 
+        try:
+            s = requests.Session()
+            URL =  link['link']
+            page = s.get(URL.strip())
+            soup = BeautifulSoup(page.content, "html.parser")
 
-        s = requests.Session()
-        URL =  link['link']
-        page = s.get(URL.strip())
-        soup = BeautifulSoup(page.content, "html.parser")
-
-        images = soup.find("div", class_="main-gallery").find_all("img", class_="image-blur")
-        mappedImages = []
-        for image in images:
-            try:
-                if(image["src"]):
-                   mappedImages.append(image["data-image"])
-            except KeyError:
-                   continue
+            images = soup.find("div", class_="main-gallery").find_all("img", class_="image-blur")
+            mappedImages = []
+            for image in images:
+                try:
+                    if(image["src"]):
+                       mappedImages.append(image["data-image"])
+                except KeyError:
+                    continue
 
 
-        title = soup.find("h1", class_="p-name").text.strip()
-        # styleNum = soup.find("span", class_="sk-model-alt-title").text.strip()
-        price = extractPrice(soup.find("span", class_="one-price").text.strip())
-
-        mappedSizes = []
-        sizes = soup.find("div", class_="size-options").find_all("a", class_="")
-        for size in sizes:
-            try:
-                mappedSizes.append(size.text.strip())
-            except KeyError:
-                continue
-        title = title.replace("Ayakkabı", "").replace("Spor", "").replace("Erkek", "").replace("Nubuk", "").replace("Yeşil", "").replace("Koyu", "").replace("Kadin", "")
-        insertIntoDb(link, title, price, price, "", mappedSizes, mappedImages)
+            title = soup.find("h1", class_="p-name").text.strip()
+            print(title)
+            nprice = ''
+            oprice = ''
+            if(soup.find("span", class_="one-price")): 
+                oprice = extractPrice(soup.find("span", class_="one-price").text.strip())
+                nprice = oprice
+            if(soup.find("span", class_="new-price")):
+                nprice = extractPrice(soup.find("span", class_="new-price").text.strip())
+                oprice = extractPrice(soup.find("span", class_="old-price").text.strip())
+            
+            mappedSizes = []
+            sizes = soup.find("div", class_="size-options").find_all("a", class_="")
+            for size in sizes:
+                try:
+                    mappedSizes.append(size.text.strip())
+                except KeyError:
+                    continue
+            title = title.replace("Ayakkabı", "").replace("Spor", "").replace("Erkek", "").replace("Nubuk", "").replace("Yeşil", "").replace("Koyu", "").replace("Kadin", "")
+            insertIntoDb(link, title, oprice, nprice, "", mappedSizes, mappedImages)
+        except Exception as e: 
+            print('timber')
+            print(link)
+            print(e)
+            print("**")
     time.sleep(3)
            
            

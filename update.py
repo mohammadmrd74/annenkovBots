@@ -112,47 +112,87 @@ def df_loops(link):
         }
 
         try:
-            
-            s = requests.Session()
             URL = link['link']
-            page = s.get(URL, headers=headers, timeout=10)
+            s = requests.Session()
+            page = s.get(URL, headers=headers)
+            print(page)
             soup = BeautifulSoup(page.content, "html.parser")
-            scripts = soup.find_all("script")
+            print(soup.find("li", class_="description-preview__style-color ncss-li"))
+            # f.write(page.text)
+            scripts = ''
+            if (soup.find("li", class_="description-preview__style-color ncss-li") == None):
+                print('first try')
+                time.sleep(2)
+                s = requests.Session()
+                page = s.get(URL, headers=headers)
+                soup = BeautifulSoup(page.content, "html.parser")
+                scripts = soup.find_all("script")
+                if (soup.find("li", class_="description-preview__style-color ncss-li") == None):
+                    print('second try')
+                    time.sleep(2)
+                    s = requests.Session()
+                    page = s.get(URL, headers=headers)
+                    soup = BeautifulSoup(page.content, "html.parser")
+                    scripts = soup.find_all("script")
+                    if (soup.find("li", class_="description-preview__style-color ncss-li") == None):
+                        print('third try')
+                        time.sleep(4)
+                        s = requests.Session()
+                        page = s.get(URL, headers=headers)
+                        soup = BeautifulSoup(page.content, "html.parser")
+                        scripts = soup.find_all("script")
+                        if (soup.find("li", class_="description-preview__style-color ncss-li") == None):
+                            print('forth try')
+                            time.sleep(6)
+                            s = requests.Session()
+                            page = s.get(URL, headers=headers)
+                            soup = BeautifulSoup(page.content, "html.parser")
+                            scripts = soup.find_all("script")
+                            if (soup.find("li", class_="description-preview__style-color ncss-li") == None):
+                                print('5 try')
+                                time.sleep(3)
+                                s = requests.Session()
+                                page = s.get(URL, headers=headers)
+                                soup = BeautifulSoup(page.content, "html.parser")
+                                scripts = soup.find_all("script")
+            else: scripts = soup.find_all("script")
             details = ''
+            print(12421421)
             for script in scripts:
                 if(script.text.find("INITIAL_REDUX_STATE") != -1):
                     details = script.text
             fstyleNum = soup.find("li", class_="description-preview__style-color ncss-li").text.strip().replace('Stil: ', '')
+
+                    
             styleNum = fstyleNum
             details = details.replace('window.INITIAL_REDUX_STATE=', '')
             details = details[0:-1]
             jsonDetails = json.loads(details)
+            print(fstyleNum)
             if(fstyleNum not in jsonDetails['Threads']['products']):
-                urlst = URL.split('/')[-1]
-                print(urlst)
+                urlst = URL.strip().split('/')[-1]
                 if(urlst in jsonDetails['Threads']['products']):
                     styleNum = urlst
                 else:
                     styleNum = list(jsonDetails['Threads']['products'].keys())[0]
-            else: 
-                styleNum = fstyleNum
             price = jsonDetails['Threads']['products'][styleNum]['currentPrice']
             fullPrice = jsonDetails['Threads']['products'][styleNum]['fullPrice']
             allSizes = jsonDetails['Threads']['products'][styleNum]['skus']
             availableSizes = jsonDetails['Threads']['products'][styleNum]['availableSkus']
+
+            print(122)
             availableSizesInNumber = []
             for size in allSizes:
                 for asize in availableSizes:
                     if(size['skuId'] == asize['id']):
                         availableSizesInNumber.append(size['localizedSize'])
+            print(123)
             price = extractPrice(str(price), ',')
             fullPrice = extractPrice(str(fullPrice), ',')
-
-            updateDb(link['productId'], fullPrice, price, availableSizesInNumber)
+            print(124)
+            updateDb(link['productId'], fullPrice + 60, price + 60, availableSizesInNumber)
         except Exception as e: 
-            print(link)
-            disableProduct(link['productId'])
-            f.write(str(link['link']) + '****' + str(link['productId']) + '\n')
+            print(link['link'])
             print(e)
             print("**")
 
