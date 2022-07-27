@@ -62,27 +62,12 @@ def updateDb(productId, price, totalPrice, sizes):
 def insertIntoDb(link, title, price, totalPrice, styleNum, availableSizesInNumber, mappedImages):
     sem.acquire()
     try:
-        mycursor.execute("SELECT id from brands where brandName = 'adidas'")
+        mycursor.execute("SELECT id from brands where brandName = 'asics'")
         brandId = mycursor.fetchall()
         sql = "INSERT INTO products (title, price, totalPrice, styleNumber, currencyId, brandId, mainAndCategoryId, typeId, linkId, link, colorId, sColorId) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
         val = (title, price, totalPrice, styleNum, 1, brandId[0]['id'], 4, 1, 1, link,3, 2)
         mycursor.execute(sql, val)
-        mydb.commit()
 
-        mycursor.execute("SELECT LAST_INSERT_ID() as insertedId")
-        insertedId = mycursor.fetchall()
-        insertedId = insertedId[0]['insertedId']
-        for size in availableSizesInNumber:
-            mycursor.execute("SELECT sizeId from size where size = %s", [size])
-            sizeId = mycursor.fetchall()
-            mycursor.execute("INSERT INTO linkSizeAndProduct(sizeId, productId) VALUES (%s, %s)", [sizeId[0]['sizeId'], insertedId])
-            mydb.commit()
-        
-        for image in mappedImages:
-            mycursor.execute("INSERT INTO images(imageUrl, productId) VALUES (%s, %s)", [image, insertedId])
-            mydb.commit()
-
-        mycursor.execute("UPDATE links SET inserted=%s where id = %s", [1, 1])
         mydb.commit()
         sem.release()
     except Exception as e: 
@@ -105,44 +90,48 @@ def extractPrice(price, sep='.'):
   
   return extPrice
 
-adiheaders = {
-    'origin': 'www.adidas.com.tr',
-    'cookie': '',
-    'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36'
-}
 
-print("\n\n******** ADIDAS *********\n\n")
-adiheaders = {
-  'origin': 'www.adidas.com.tr',
-  'cookie': '',
-  'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36'
-}
-URL = "https://www.adidas.com.tr/tr/lite-racer-cln-2.0-ayakkabi/GZ2829.html"
 
-styleNum = URL.split('/')[-1]
-styleNum = re.findall("^(.*?)\.html", styleNum)[0]
-print(styleNum)
-page = requests.get(URL, headers=adiheaders)
+
+print("\n\n******** NEWBALANCE *********\n\n")
+
+s = requests.Session()
+# URL = "https://www.newbalance.com.tr/urun/new-balance-997-410916.html"
+URL = "https://www.newbalance.com.tr/urun/new-balance-996-411083.html"
+page = s.get(URL.strip())
 soup = BeautifulSoup(page.content, "html.parser")
-scripts = soup.find_all("script")
-# for sc in script:
-#     print(sc.text, end="\n\n")
-# print(scripts)
-details = ''
-for script in scripts:
-  if(script.text.find("@context") != -1):
-    details = script.text
-pyperclip.copy(details)
-details = json.loads(details)
-sizes = requests.get("https://www.adidas.com.tr/api/products/"+ styleNum + "/availability?sitePath=en", headers=adiheaders)
-filtered = list(filter(lambda var: var["availability_status"] == "IN_STOCK", sizes.json()["variation_list"]))
-mappedSizes = list(map(lambda x: x["size"], filtered))
-price = extractPrice(str(details["offers"]["price"]))
-morePrice = price
-if (soup.find("div", class_="gl-price-item--crossed")):
-    morePrice = extractPrice(soup.find("div", class_="gl-price-item--crossed").text.strip())
+product = soup.find_all("h1", class_="emos_H1")
+title = product[0].text.strip()
+price = extractPrice(soup.find(id="ctl00_u23_ascUrunDetay_dtUrunDetay_ctl00_lblSatisFiyat").text.strip())
+morePrice= price
+if(soup.find(id="plhSatisIlkFiyat").text):
+    morePrice = extractPrice(soup.find(id="plhSatisIlkFiyat").text.strip())
+    
+cloudId = URL.strip().split("/")[-1]
+cloudId = cloudId.split("-")[-1].replace(".html", "")
+styleNum = soup.find("div", class_="ems-prd-sort-desc").text.strip()
+tags = soup.find_all("ul", class_="swiper-wrapper slide-wrp")[0]
+images = tags.find_all("a")
+mappedImages = []
+for image in images:
+    try:
+        if(image["data-large"]):
+            mappedImages.append(image["data-large"])
+    except KeyError:
+        continue
+
+sizes = page = s.get("https://www.newbalance.com.tr/usercontrols/urunDetay/ajxUrunSecenek.aspx?urn="+cloudId+"&fn=dty&std=True&type=scd1&index=0&objectId=ctl00_u23_ascUrunDetay_dtUrunDetay_ctl00&runatId=urunDetay&scd1=0&lang=tr-TR")
+soup = BeautifulSoup(page.content, "html.parser")
+realSizes = []
+sizes = soup.find_all("a")
+for size in sizes:
+    try:
+        if(size["class"] and size["class"].count("stokYok") != 0):     
+            continue
+        else:
+            realSizes.append(size.text.strip())
+    except KeyError:
+        realSizes.append(size.text.strip())
+
+print(price)
 print(morePrice)
-
-insertIntoDb("https://www.adidas.com.tr/tr/ultimashow-ayakkabi/FX3633.html", details["name"].replace('Ayakkabı', ''),price, price, styleNum, mappedSizes, details["image"])
-
-

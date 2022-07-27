@@ -67,7 +67,7 @@ mydb = mysql.connector.connect(
 
 mycursor = mydb.cursor(dictionary=True)
 
-mycursor.execute("select * from links where inserted = 0 and brand = 'adidas'")
+mycursor.execute("select * from links where inserted = 0 and brand = 'new balance'")
 
 links = mycursor.fetchall()
 # print(links)
@@ -177,10 +177,13 @@ def df_loops(link):
         soup = BeautifulSoup(page.content, "html.parser")
         product = soup.find_all("h1", class_="emos_H1")
         title = product[0].text.strip()
-        price = soup.find(id="ctl00_u23_ascUrunDetay_dtUrunDetay_ctl00_lblSatisFiyat").text.strip()
+        price = extractPrice(soup.find(id="ctl00_u23_ascUrunDetay_dtUrunDetay_ctl00_lblSatisFiyat").text.strip())
+        morePrice= price
+        if(soup.find(id="plhSatisIlkFiyat").text):
+            morePrice = extractPrice(soup.find(id="plhSatisIlkFiyat").text.strip())
         cloudId = URL.strip().split("/")[-1]
         cloudId = cloudId.split("-")[-1].replace(".html", "")
-        extPrice = extractPrice(price)
+
         styleNum = soup.find("div", class_="ems-prd-sort-desc").text.strip()
         tags = soup.find_all("ul", class_="swiper-wrapper slide-wrp")[0]
         images = tags.find_all("a")
@@ -206,7 +209,7 @@ def df_loops(link):
                 realSizes.append(size.text.strip())
 
 
-        insertIntoDb(link, title, extPrice, extPrice, styleNum.split(" ")[-1], realSizes, mappedImages)
+        insertIntoDb(link, title, morePrice, price, styleNum.split(" ")[-1], realSizes, mappedImages)
     
     elif(link['brand'] == 'reebok'):
         print("\n\n******** REEBOK *********\n\n")
@@ -372,17 +375,28 @@ def df_loops(link):
 
             title = soup.find("span", class_="sk-model-title").text.strip()
             styleNum = soup.find("span", class_="sk-model-alt-title").text.strip()
-            price = extractPrice(soup.find("span", class_="pPrice").text.strip())
+            price = 0,
+            morePrice = 0
+            if(len(soup.find_all("span", class_="pPrice")) == 2):
+                price = extractPrice(soup.find_all("span", class_="pPrice")[1].text.strip())
+                morePrice = extractPrice(soup.find_all("span", class_="pPrice")[0].text.strip())
+            else:
+                price = extractPrice(soup.find_all("span", class_="pPrice")[0].text.strip())
+                morePrice = price
+
 
             mappedSizes = []
-            sizes = soup.find("div", class_="cl-size-input-container").find_all("span", class_="custom-control-description")
+            sizes = soup.find("div", class_="cl-size-input-container").find_all("label")
+
+            # print(sizes)
             for size in sizes:
                 try:
-                    mappedSizes.append(size.text.strip())
+                    if(size["data-stock"] != '0'):
+                        mappedSizes.append(size.text.strip())
                 except KeyError:
                     continue
 
-            insertIntoDb(link, title, price, price, styleNum.split(" ")[-1], mappedSizes, mappedImages)
+            insertIntoDb(link, title, morePrice, price, styleNum.split(" ")[-1], mappedSizes, mappedImages)
         except Exception as e: 
             print('asics')
             print(link)

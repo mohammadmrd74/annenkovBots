@@ -100,7 +100,7 @@ headers = {
 }
 
 s = requests.Session()
-URL = "https://www.asics.com.tr/p-patriot-12-kadin-yesil-kosu-ayakkabisi-1012a705-304"
+URL = "https://www.asics.com.tr/p-gel-rocket-10-erkek-siyah-gri-voleybol-ayakkabisi-1071a054-009"
 page = s.get(URL.strip())
 soup = BeautifulSoup(page.content, "html.parser")
 
@@ -116,14 +116,24 @@ for image in images:
 
 title = soup.find("span", class_="sk-model-title").text.strip()
 styleNum = soup.find("span", class_="sk-model-alt-title").text.strip()
-price = extractPrice(soup.find("span", class_="pPrice").text.strip())
+
+price = 0,
+morePrice = 0
+if(len(soup.find_all("span", class_="pPrice")) == 2):
+    price = extractPrice(soup.find_all("span", class_="pPrice")[1].text.strip())
+    morePrice = extractPrice(soup.find_all("span", class_="pPrice")[0].text.strip())
+else:
+    price = extractPrice(soup.find_all("span", class_="pPrice")[0].text.strip())
+    morePrice = price
+
 
 mappedSizes = []
-sizes = soup.find("div", class_="cl-size-input-container").find_all("span", class_="custom-control-description")
-print(sizes)
+sizes = soup.find("div", class_="cl-size-input-container").find_all("label")
+
+# print(sizes)
 for size in sizes:
     try:
-        mappedSizes.append(size.text.strip())
+        if(size["data-stock"] != '0'):
+            mappedSizes.append(size.text.strip())
     except KeyError:
         continue
-
