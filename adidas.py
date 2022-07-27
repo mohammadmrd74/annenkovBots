@@ -1,9 +1,4 @@
-from joblib import PrintTime
-from matplotlib import style
-from matplotlib.style import available
-from numpy import size
-import decimal
-from regex import P
+
 import requests
 import mysql.connector
 from bs4 import BeautifulSoup
@@ -122,7 +117,7 @@ adiheaders = {
   'cookie': '',
   'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36'
 }
-URL = "https://www.adidas.com.tr/tr/lite-racer-rebold-ayakkabi/GY5980.html"
+URL = "https://www.adidas.com.tr/tr/lite-racer-cln-2.0-ayakkabi/GZ2829.html"
 
 styleNum = URL.split('/')[-1]
 styleNum = re.findall("^(.*?)\.html", styleNum)[0]
@@ -137,14 +132,14 @@ details = ''
 for script in scripts:
   if(script.text.find("@context") != -1):
     details = script.text
-# print(details)
+pyperclip.copy(details)
 details = json.loads(details)
 sizes = requests.get("https://www.adidas.com.tr/api/products/"+ styleNum + "/availability?sitePath=en", headers=adiheaders)
 filtered = list(filter(lambda var: var["availability_status"] == "IN_STOCK", sizes.json()["variation_list"]))
 mappedSizes = list(map(lambda x: x["size"], filtered))
 price = extractPrice(str(details["offers"]["price"]))
-print(mappedSizes)
-print(details["image"])
+morePrice = extractPrice(soup.find("div", class_="gl-price-item--crossed").text.strip())
+print(morePrice)
 
 insertIntoDb("https://www.adidas.com.tr/tr/ultimashow-ayakkabi/FX3633.html", details["name"].replace('Ayakkabı', ''),price, price, styleNum, mappedSizes, details["image"])
 

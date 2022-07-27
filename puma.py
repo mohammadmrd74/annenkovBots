@@ -1,9 +1,3 @@
-from joblib import PrintTime
-from matplotlib import style
-from matplotlib.style import available
-from numpy import size
-import decimal
-from regex import P
 import requests
 import mysql.connector
 from bs4 import BeautifulSoup
@@ -97,7 +91,7 @@ def extractPrice(price, sep='.'):
 
 
 
-URL = "https://tr.puma.com/rs-fast-unmarked-i-yanstan-ayakkab-385211-01.html"
+URL = "https://tr.puma.com/st-runner-v2-mesh-ayakkab-366811-06.html"
 
 print("\n\n******** puma *********\n\n")
 headers = {
@@ -123,7 +117,14 @@ for image in images:
 
 
 title = soup.find("h1", class_="page-title").text.strip()
+prices1 = soup.find_all("span", class_="price")[0].text.strip()
+prices2 = soup.find_all("span", class_="price")[1].text.strip()
+prices1 = extractPrice(prices1)
+prices2 = extractPrice(prices2)
 price = extractPrice(soup.find("span", class_="price").text.strip())
+if( prices1 is None or prices2 is None):
+    prices1 = price
+    prices2 = price
 styleNum = soup.find("div", class_="product-article").find("span", class_="product-article__value").text.strip()
 color = soup.find("span", class_="colors__text-name").text.strip()
 details = ''
@@ -139,7 +140,7 @@ for size in allSizes:
   for pr in size["products"]:
       if(founded["products"].count(pr) != 0):
           foundedSizes.append(size["label"])
-print(mappedImages)
+# print(mappedImages)
 
 # print(link, title.replace('Ayakkabı', ''), price, price, styleNum, foundedSizes, mappedImages)
 # insertIntoDb(link, title.replace('Ayakkabı', ''), price, price, styleNum, foundedSizes, mappedImages)

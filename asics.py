@@ -1,9 +1,4 @@
-from joblib import PrintTime
-from matplotlib import style
-from matplotlib.style import available
-from numpy import size
-import decimal
-from regex import P
+
 import requests
 import mysql.connector
 from bs4 import BeautifulSoup
@@ -105,7 +100,7 @@ headers = {
 }
 
 s = requests.Session()
-URL = "https://www.asics.com.tr/p-gel-nimbus-24-erkek-lacivert-turuncu-kosu-ayakkabisi-1011b359-402"
+URL = "https://www.asics.com.tr/p-patriot-12-kadin-yesil-kosu-ayakkabisi-1012a705-304"
 page = s.get(URL.strip())
 soup = BeautifulSoup(page.content, "html.parser")
 
