@@ -105,7 +105,7 @@ headers = {
 }
 
 s = requests.Session()
-URL = "https://www.salomon.com.tr/xa-collider-2-gore-tex-kadin-outdoor-ayakkabi-l41433800"
+URL = "https://www.salomon.com.tr/hypulse-kadin-patika-kosu-ayakkabisi-l41595300"
 page = s.get(URL.strip())
 soup = BeautifulSoup(page.content, "html.parser")
 
@@ -124,8 +124,7 @@ price = extractPrice(soup.find("span", class_="spanFiyat").text.strip(), '.')
 styleNum = soup.find("span", class_="productcode").text.strip().replace('(', '').replace(')','')
 mappedSizes = []
 scripts = soup.find("body").find_all("script")[0].text.strip()
-pyperclip.copy(scripts[scripts.find('{'):(scripts.find(';'))])
 scripts = json.loads(scripts[scripts.find('{'):(scripts.find(';'))])
 filtered = list(filter(lambda var: var["stokAdedi"] > 0 and var["ekSecenekTipiTanim"] == "Beden", scripts["productVariantData"]))
 sizes = list(map(lambda x: x["tanim"][x["tanim"].find('(')+1:x["tanim"].find(')')], filtered))
-print(sizes)
+print(title,price)
