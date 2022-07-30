@@ -14,7 +14,7 @@ sem = threading.Semaphore()
 path = os.path.abspath(os.getcwd())
 print(path)
 sucess = False
-TYPE = "update"
+TYPE = "insert"
 # TYPE='insert'
 print(TYPE)
 
@@ -174,7 +174,7 @@ def insertIntoDb(
 
 
 mydb = mysql.connector.connect(
-    host="171.22.24.215", user="root", db="annenkovstore", password="kaskas"
+    host="171.22.24.215", user="anenkov", db="annenkovstore", password="anenanenkovkov"
 )
 
 mycursor = mydb.cursor(dictionary=True)
@@ -182,7 +182,7 @@ mycursor = mydb.cursor(dictionary=True)
 if (TYPE == "update"):
     mycursor.execute("select productId, link, (select brandName from brands where id = brandId) as brand from products")
 else:
-    mycursor.execute("select * from links where inserted = 0 and brand = 'new balance'")
+    mycursor.execute("select * from links where inserted = 0")
 
 products = mycursor.fetchall()
 # print(links)

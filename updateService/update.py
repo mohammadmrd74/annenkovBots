@@ -16,9 +16,9 @@ print(path)
 
 mydb = mysql.connector.connect(
     host="171.22.24.215",
-    user="root",
+    user="anenkov",
     db="annenkovstore",
-    password="kaskas"
+    password="anenanenkovkov"
 )
 
 mycursor = mydb.cursor(dictionary=True)
