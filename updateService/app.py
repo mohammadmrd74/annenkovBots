@@ -1,4 +1,4 @@
-from flask import Flask;
+from flask import Flask
 from update import df_loops
 from flask import request
 
@@ -6,6 +6,7 @@ app = Flask(__name__)
 
 @app.route("/update")
 def hello_world():
+    print(124124, request.args.get('productId'))
     updateproduct = df_loops(request.args.get('productId'))
     return updateproduct
 
