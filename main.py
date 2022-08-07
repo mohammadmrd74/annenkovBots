@@ -2,6 +2,7 @@ from multiprocessing.pool import ThreadPool
 import re
 from matplotlib.style import available
 import mysql.connector
+import pyperclip
 import requests
 from bs4 import BeautifulSoup
 import json
@@ -15,7 +16,7 @@ path = os.path.abspath(os.getcwd())
 print(path)
 sucess = False
 TYPE = "insert"
-# TYPE='insert'
+# TYPE = "update"
 print(TYPE)
 
 f = open(path + "/errorLinks.txt", "a")
@@ -30,6 +31,8 @@ def disableProduct(id):
     sem.acquire()
     try:
         mycursor.execute("UPDATE products SET active=0 where productId = %s", [id])
+        mydb.commit()
+        mycursor.execute("UPDATE links SET active=0 where productId = %s", [id])
         mydb.commit()
     except Exception as e: 
         print(e)
@@ -180,18 +183,18 @@ mydb = mysql.connector.connect(
 mycursor = mydb.cursor(dictionary=True)
 
 if (TYPE == "update"):
-    mycursor.execute("select productId, link, (select brandName from brands where id = brandId) as brand from products")
+    mycursor.execute("select productId, link, (select brandName from brands where id = brandId) as brand from products where active=0")
 else:
     mycursor.execute("select * from links where inserted = 0")
 
 products = mycursor.fetchall()
 # print(links)
 def df_loops(link):
-    if link["brand"] == "nike1" or link["brand"] == "jordan1":
+    print('loop', link)
+    if link["brand"] == "nike" or link["brand"] == "jordan":
         print("\n\n******** " + link["brand"] + " *********\n\n")
         headers = {
             "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36",
-            "cookie": 'AnalysisUserId=2.19.196.126.256951659079848165; feature_enabled__as_nav_rollout=true; audience_segmentation_performed=true; AKA_A2=A; geoloc=cc=IR,rc=,tp=vhigh,tz=GMT+3.50,la=35.67,lo=51.42; bm_sz=C1C68DE8A29B46FB8D5CA39AD730EA93~YAAQfsQTAqRf2iKCAQAAp3XdSBAOjH7sVJXEs5miW5fAImFArgiXElDh0Sc1VXnyA6xsCqbUw16a+ejvy0LGlj0PfICFW6gHykKdNit/YVNGWF+2wAnRf76nUX4KDhK2dGCgy/pi2GAIyWcFT+G6ntMGVf6dfM/DHKYn160nWHEPzx1hsiYk6hJXBLEkx1fDD7zk8HVvx0xRN9QOw7Zljv7vfUClQv24qH8eWc/jq4XQ1k9U7O8fdzG0W/bevxyB0jEg7sUCjccA85EzCVoX6W8gCnD+ijZ9svUfe0hNBq3TJ5cnnYk7SxBq/jGlqN219U7d2uEOQMhjDQXuP4ELqZL8kA5DeQjaeBdoOd2EOMa4rRTBdBIQhA+KTxQ8EDzs66hnW1ib26VOsDnB8IY=~3290182~3422261; guidS=38eb665d-e175-415a-fc4d-4db58995f2f5; guidU=c28b6939-84d9-4d4c-84bc-284e5c1e07cf; NIKE_COMMERCE_COUNTRY=TR; NIKE_COMMERCE_LANG_LOCALE=tr_TR; s_ecid=MCMID%7C00078281668325488764570501589095094480; AMCVS_F0935E09512D2C270A490D4D%40AdobeOrg=1; AMCV_F0935E09512D2C270A490D4D%40AdobeOrg=1994364360%7CMCMID%7C00078281668325488764570501589095094480%7CMCAID%7CNONE%7CMCOPTOUT-1659087049s%7CNONE%7CvVersion%7C3.4.0; ak_bmsc=426AA54AB58D4930B1912B5F4F4265A4~000000000000000000000000000000~YAAQfsQTAqNg2iKCAQAA4nndSBCSwwO+6axi6dcDcu/pIO2RkGIXZU0uuOXZVg1obQri1MuxS2Q/V1WL4l4GWLtl/K888M/uCCkVVv5V4CaUpU8dkwK2+hYABv3hVM+3bAi2LtzeHOE1Os4ThsYYJBhvmczrF+t/EuK4UFK3FLJvL3OkEbFjFaa2BxPnDUHu7mbK7kJTeT8D2MtNc0U+5R7Ryub99FahCBAgoahoL9wqL7HL7ZjEi+DkVBdr803nYAuU0uueJd8GzZ/8ZaGLcMFGvyHf1Rt+6UJed0Kn/vySGVSwVJjdZlWxcfkOdnuqqO9dMgct95T8SQ1dJE8UxUXTuGLdAIxHlDe9HNM5CyCDvwVH2xetpUlYn0Dcd8RyTR14Zuf+McAP28PFHMkwfpl6bQwpp7hefqfiS7JmgOtZQqfa4cu/siI5dPeXC36fOo3f3Xl6aGd0fKYPbAyn/1/uTLrhgMq6ieR673Kdkamb69nDU/RB; RES_TRACKINGID=27309745747803; RES_SESSIONID=594658110776082; ResonanceSegment=1; anonymousId=7DD74E1DD1BB61FCC6FFF08698D260B5; ppd=pdp|nikecom>pdp>kd%20trey%205%20x; bm_sv=780B22F9C2976F46AE77DF28295C2171~YAAQfsQTAt3K3CKCAQAAAOXoSBCTrFlviAHitDgIib/0CyLapcgM/nr0PQgAfkqc5CVJZwdzBIqiIWRfy3ZpVw8WrgPFfPLhvkhgr3iTtfu8RBn+iW+JCt3joO5gYRbvSyNI95NMQuetTGxpuKTZ3/YmaE1T2IH5XDoFDNlv3cXAX3M9qv7bV9az144Lte1+HYI2TwJZP3ugLnZ/rRXDb1+mXl5Fi8NNC3GWOjwExBHo8SUgcCZl3eK9+nSzFcw=~1; _abck=1B2682DED7212205EAFEB69F39FC665A~-1~YAAQDt46F8BkuSCCAQAAieroSAhQuA5qxU9a36WqHWF5SW3nZjoyXKB66+zpN5viF6ncIwu1eGkoJzHRbBM67Bu9v0XMJwRUPmCymGtuAKuSGwKtofYGw0KIv9hM5zDqqZyG+V8xYqvQSzmxhhRlfr8ParChQ97gUjUMQ3OitwfexhO+HGimxnHvdrMnsX/KlJzdmz8heVWrIIqK+7hadvH4UW+IzU/WFk3lbynkhU3R2A76nY2m+yB7Gf8+nY9ELx7QFhQLexd2/Rc7tIHq5dmS8UpCk2qQDtK+NMIHwmqW18f/U5b04HPB2nvN7VqV0Ik9qNSiljBh6/uf22KVRDEC6bPntItl+8sjVkygfnP2rdAOK9KZ5m9uMszeiNh8F+zYBDYfzgLvVAYtBZjStMqqey/PcX3A36y8bORfPIMVbI0A3qBgUChNHjHvHp4cLfxhFKBsTVV/u1UF8zGS1UN/Yy8acFAZV5o0PS3pvQ2uy6GY31gd+/f0UtoLuZ7hnM98R6JRKxkGHwJknpCorvI=~-1~-1~-1; RT="z=1&dm=nike.com&si=4d9dbf13-532c-4226-bdb6-4bd179df7cc8&ss=l665az2f&sl=5&tt=kq1&bcn=%2F%2F684dd32d.akstat.io%2F&ld=g3qc&ul=g55s"',
             "origin": "https://www.nike.com/tr",
             "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
         }
@@ -199,11 +202,12 @@ def df_loops(link):
         try:
             URL = link["link"]
             s = requests.Session()
-            page = s.get(URL, headers=headers)
+            page = s.get(URL, headers=headers, timeout=10)
             soup = BeautifulSoup(page.content, "html.parser")
 
 
             mains = soup.find("script", id="__NEXT_DATA__").text.strip()
+            pyperclip.copy(mains)
 
             fstyleNum = (
                 soup.find("li", class_="description-preview__style-color ncss-li")
@@ -222,44 +226,45 @@ def df_loops(link):
                 else:
                     styleNum = list(jsonDetails["Threads"]["products"].keys())[0]
 
+            images = jsonDetails["Threads"]["products"][styleNum]["nodes"][0]["nodes"]
 
-                images = jsonDetails["Threads"]["products"][styleNum]["nodes"][0]["nodes"]
-
-                mappedImages = list(
-                    map(
-                        lambda x: x["properties"]["squarishURL"].replace(
-                            "t_default", "t_PDP_1280_v1/f_auto,q_auto:eco"
-                        )
-                        if ("squarishURL" in x["properties"])
-                        else None,
-                        images,
+            mappedImages = list(
+                map(
+                    lambda x: x["properties"]["squarishURL"].replace(
+                        "t_default", "t_PDP_1280_v1/f_auto,q_auto:eco"
                     )
+                    if ("squarishURL" in x["properties"])
+                    else None,
+                    images,
                 )
-                mappedImages = list(filter(None, mappedImages))
-                price = jsonDetails["Threads"]["products"][styleNum]["currentPrice"]
-                fullPrice = jsonDetails["Threads"]["products"][styleNum]["fullPrice"]
-                allSizes = jsonDetails["Threads"]["products"][styleNum]["skus"]
-                availableSizes = jsonDetails["Threads"]["products"][styleNum]["availableSkus"]
-                title = jsonDetails["Threads"]["products"][styleNum]["title"]
-                availableSizesInNumber = []
-                for size in allSizes:
-                    for asize in availableSizes:
-                        if size["skuId"] == asize["id"]:
-                            availableSizesInNumber.append(size["localizedSize"])
-                price = extractPrice(str(price), ",")
-                fullPrice = extractPrice(str(fullPrice), ",")
+            )
+            mappedImages = list(filter(None, mappedImages))
+            price = jsonDetails["Threads"]["products"][styleNum]["currentPrice"]
+            fullPrice = jsonDetails["Threads"]["products"][styleNum]["fullPrice"]
+            allSizes = jsonDetails["Threads"]["products"][styleNum]["skus"]
+            availableSizes = jsonDetails["Threads"]["products"][styleNum]["availableSkus"]
+            title = jsonDetails["Threads"]["products"][styleNum]["title"]
+            availableSizesInNumber = []
+            for size in allSizes:
+                for asize in availableSizes:
+                    if size["skuId"] == asize["id"]:
+                        availableSizesInNumber.append(size["localizedSize"])
+            price = extractPrice(str(price), ",")
+            fullPrice = extractPrice(str(fullPrice), ",")
+
+         
             if (TYPE != "update"):
                 insertIntoDb(
                     link,
                     title,
-                    fullPrice,
-                    price,
+                    fullPrice + 60,
+                    price + 60,
                     fstyleNum,
                     availableSizesInNumber,
                     mappedImages,
                 )
             else:
-                updateDb(link["productId"], morePrice, price, realSizes)
+                updateDb(link["productId"], morePrice + 60, price + 60, realSizes)
 
         except Exception as e:
             sucess = False
@@ -276,7 +281,7 @@ def df_loops(link):
         s = requests.Session()
         URL = link["link"]
         try:
-            page = s.get(URL.strip())
+            page = s.get(URL.strip(), timeout=10)
             soup = BeautifulSoup(page.content, "html.parser")
             product = soup.find_all("h1", class_="emos_H1")
             title = product[0].text.strip()
@@ -349,7 +354,7 @@ def df_loops(link):
         try: 
             s = requests.Session()
             URL = link["link"]
-            page = s.get(URL.strip())
+            page = s.get(URL.strip(), timeout=10)
             soup = BeautifulSoup(page.content, "html.parser")
 
             images = soup.find_all("img", class_="image-blur")
@@ -410,7 +415,7 @@ def df_loops(link):
             styleNum = URL.split("/")[-1]
             styleNum = re.findall("^(.*?)\.html", styleNum)[0]
             print(URL)
-            page = requests.get(URL.strip(), headers=adiheaders)
+            page = requests.get(URL.strip(), headers=adiheaders, timeout=10)
             print(page)
             soup = BeautifulSoup(page.content, "html.parser")
             scripts = soup.find_all("script")
@@ -475,7 +480,7 @@ def df_loops(link):
         try:
             s = requests.Session()
             URL = link["link"]
-            page = s.get(URL.strip())
+            page = s.get(URL.strip(), timeout=10)
             soup = BeautifulSoup(page.content, "html.parser")
 
             images = soup.find_all("img", class_="gallery-item__img")
@@ -541,7 +546,7 @@ def df_loops(link):
             if (TYPE == "update"):
                 disableProduct(link['productId'])
                 f.write(str(link['link']) + '\n')
-            print("asics")
+            print("puma")
             print(link)
             print(e)
             print("**")
@@ -556,7 +561,7 @@ def df_loops(link):
         try:
             s = requests.Session()
             URL = link["link"]
-            page = s.get(URL.strip())
+            page = s.get(URL.strip(), timeout=10)
             soup = BeautifulSoup(page.content, "html.parser")
 
             images = soup.find("div", class_="swiper-wrapper").find_all(
@@ -631,7 +636,7 @@ def df_loops(link):
         try:
             s = requests.Session()
             URL = link["link"]
-            page = s.get(URL.strip())
+            page = s.get(URL.strip(), timeout=10)
             soup = BeautifulSoup(page.content, "html.parser")
 
             images = soup.find_all("img", class_="cloudzoom")
@@ -679,7 +684,7 @@ def df_loops(link):
         try:
             s = requests.Session()
             URL = link["link"]
-            page = s.get(URL.strip())
+            page = s.get(URL.strip(), timeout=10)
             soup = BeautifulSoup(page.content, "html.parser")
             product = soup.find(id="productDetail")
             tags = product.find(id="pageContent")
@@ -738,7 +743,7 @@ def df_loops(link):
         try:
             s = requests.Session()
             URL = link["link"]
-            page = s.get(URL.strip())
+            page = s.get(URL.strip(), timeout=10)
             soup = BeautifulSoup(page.content, "html.parser")
 
             images = soup.find("div", class_="main-gallery").find_all("img", class_="image-blur")
@@ -796,10 +801,10 @@ print(products[0])
 if (TYPE == "update"):
     random.shuffle(products)
     print(products[0])
-    links = [products[i:i + 40] for i in range(0, len(products), 40)]
+    links = [products[i:i + 20] for i in range(0, len(products), 20)]
 
     for chLink in links:
-        with ThreadPool(40) as pool:
+        with ThreadPool(20) as pool:
             for result in pool.map(df_loops, chLink):
                 df.append(result)
         print('LOOOOOOOOOOOOP')
@@ -807,10 +812,10 @@ if (TYPE == "update"):
 
 
 else:
-    links = [products[i : i + 10] for i in range(0, len(products), 10)]
+    links = [products[i : i + 2] for i in range(0, len(products), 50)]
 
     for chLink in links:
-        with ThreadPool(10) as pool:
+        with ThreadPool(2) as pool:
             for result in pool.map(df_loops, chLink):
                 df.append(result)
         time.sleep(2)

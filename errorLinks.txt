@@ -1,11 +1,23 @@
-update error3512
-update error3512
-update error3512
-update error3512
-https://tr.puma.com/suede-vtg-ayakkab-374921-19.html
-https://www.reebok.com.tr/reebok-royal-glide-ayakkabi_84158
-https://tr.puma.com/slipstream-ksa-bilekli-retro-ayakkab-384692-04.html?beden=40
-https://www.reebok.com.tr/zig-dynamica-3-ayakkabi_84826
-https://www.reebok.com.tr/club-c-double-geo-ayakkabi_84831
-https://www.reebok.com.tr/nanoflex-tr-ayakkabi_84828
-https://www.reebok.com.tr/reebok-lite-plus-30-ayakkabi_84237
+https://tr.puma.com/mb-01-orta-boy-bilekli-basketbol-ayakkab-377237-10.html?beden=37
+https://www.reebok.com.tr/classic-leather-ayakkabi_84928
+https://tr.puma.com/wild-rider-grip-ayakkab-384406-02.html?beden=45
+https://www.adidas.com.tr/tr/ozelia-ayakkabi/GY8553.html
+https://www.adidas.com.tr/tr/terrex-soulstride-arazi-kosu-ayakkabisi/FY9214.html
+https://www.timberland.com.tr/premium-6-in-siyah-erkek-bot-p_126911
+https://tr.puma.com/basket-classics-xxi-erkek-ayakkab-374923-02.html
+https://www.adidas.com.tr/tr/puremotion-ayakkabi/GX5637.html
+https://www.adidas.com.tr/tr/response-super-2.0-ayakkabi/H04565.html
+https://www.adidas.com.tr/tr/terrex-ax4-gore-tex-yuruyus-ayakkabisi/FZ3249.html
+https://tr.puma.com/puma-x-batman-suede-classic-ayakkab-383291-01.html
+https://www.adidas.com.tr/tr/pureboost-jet/GW8591.html
+https://www.adidas.com.tr/tr/barricade-tenis-ayakkabisi/GZ1408.html
+https://www.reebok.com.tr/reebok-ever-road-dmx-4-ayakkabi_84830
+https://www.reebok.com.tr/question-mid-ayakkabi_84576
+disableProduct error
+https://www.reebok.com.tr/reebok-ever-road-dmx-4-ayakkabi_84830
+disableProduct error
+https://www.reebok.com.tr/question-mid-ayakkabi_84576
+disableProduct error
+https://tr.puma.com/mb-01-orta-boy-bilekli-basketbol-ayakkab-377237-10.html?beden=37
+disableProduct error
+https://tr.puma.com/puma-x-batman-suede-classic-ayakkab-383291-01.html

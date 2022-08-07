@@ -10,10 +10,7 @@ import re
 import pyperclip
 
 mydb = mysql.connector.connect(
-    host="171.22.24.215",
-    user="root",
-    db="annenkovstore",
-    password="kaskas"
+    host="171.22.24.215", user="anenkov", db="annenkovstore", password="anenanenkovkov"
 )
 
 mycursor = mydb.cursor(dictionary=True)
@@ -117,7 +114,7 @@ adiheaders = {
   'cookie': '',
   'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36'
 }
-URL = "https://www.adidas.com.tr/tr/lite-racer-cln-2.0-ayakkabi/GZ2829.html"
+URL = "https://www.adidas.com.tr/tr/pureboost-jet/GW8591.html"
 
 styleNum = URL.split('/')[-1]
 styleNum = re.findall("^(.*?)\.html", styleNum)[0]

@@ -10,10 +10,7 @@ import re
 import pyperclip
 
 mydb = mysql.connector.connect(
-    host="171.22.24.215",
-    user="root",
-    db="annenkovstore",
-    password="kaskas"
+    host="171.22.24.215", user="anenkov", db="annenkovstore", password="anenanenkovkov"
 )
 
 mycursor = mydb.cursor(dictionary=True)
