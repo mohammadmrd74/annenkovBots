@@ -15,8 +15,8 @@ sem = threading.Semaphore()
 path = os.path.abspath(os.getcwd())
 print(path)
 sucess = False
-TYPE = "insert"
-# TYPE = "update"
+# TYPE = "insert"
+TYPE = "update"
 print(TYPE)
 
 f = open(path + "/errorLinks.txt", "a")
@@ -801,10 +801,10 @@ print(products[0])
 if (TYPE == "update"):
     random.shuffle(products)
     print(products[0])
-    links = [products[i:i + 20] for i in range(0, len(products), 20)]
+    links = [products[i:i + 10] for i in range(0, len(products), 10)]
 
     for chLink in links:
-        with ThreadPool(20) as pool:
+        with ThreadPool(10) as pool:
             for result in pool.map(df_loops, chLink):
                 df.append(result)
         print('LOOOOOOOOOOOOP')
