@@ -1,6 +1,5 @@
 from multiprocessing.pool import ThreadPool
 import re
-from matplotlib.style import available
 import mysql.connector
 import pyperclip
 import requests

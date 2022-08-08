@@ -1,9 +1,3 @@
-from joblib import PrintTime
-from matplotlib import style
-from matplotlib.style import available
-from numpy import size
-import decimal
-from regex import P
 import requests
 import mysql.connector
 from bs4 import BeautifulSoup
