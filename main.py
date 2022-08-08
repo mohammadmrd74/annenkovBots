@@ -11,11 +11,11 @@ import threading
 
 sem = threading.Semaphore()
 path = os.path.abspath(os.getcwd())
-print(path)
+
 sucess = False
 # TYPE = "insert"
 TYPE = "update"
-print(TYPE)
+
 
 f = open(path + "/errorLinks.txt", "a")
 
@@ -60,7 +60,6 @@ def extractPrice(price, sep="."):
 
 
 def updateDb(productId, price, totalPrice, sizes):
-    print("sem get", productId)
     sem.acquire()
     try:
         mycursor.execute(
@@ -71,10 +70,7 @@ def updateDb(productId, price, totalPrice, sizes):
         beforeSizes = list(map(lambda x: x["size"], beforeSizes))
         sizesToInsert = Diff(sizes, beforeSizes)
         sizezToUpdate = Diff(beforeSizes, sizes)
-        print("sizesToInsert", sizesToInsert)
-        print("sizezToUpdate", sizezToUpdate)
         if len(sizesToInsert):
-            #   print('sizesToInsert', productId)
             for size in sizesToInsert:
                 mycursor.execute("SELECT sizeId from size where size = %s", [size])
                 sizeId = mycursor.fetchall()
@@ -85,7 +81,6 @@ def updateDb(productId, price, totalPrice, sizes):
                 mydb.commit()
 
         if len(sizezToUpdate):
-            #   print('sizezToUpdate', productId)
             for size in sizezToUpdate:
                 mycursor.execute("SELECT sizeId from size where size = %s", [size])
                 sizeId = mycursor.fetchall()
@@ -97,9 +92,7 @@ def updateDb(productId, price, totalPrice, sizes):
         mycursor.execute("SELECT count(*) as count from linkSizeAndProduct where productId = %s and available = 1", [productId])
         availableSizes = mycursor.fetchall()
         availableSizes = availableSizes[0]["count"]
-        print(type(availableSizes))
         if(availableSizes == 0):
-            print(availableSizes)
             mycursor.execute(
                 "UPDATE products SET price=%s, totalPrice = %s,  active=0 where productId = %s",
                 [price, totalPrice, productId],
@@ -111,11 +104,10 @@ def updateDb(productId, price, totalPrice, sizes):
             )
         mydb.commit()
         sem.release()
-        print("sem rel", productId)
 
     except Exception as e:
-        print(e)
         f.write(str("update error" + str(productId)) + "\n")
+        print(e)
 
         sem.release()
 
@@ -188,9 +180,7 @@ else:
 products = mycursor.fetchall()
 # print(links)
 def df_loops(link):
-    print('loop', link)
     if link["brand"] == "nike" or link["brand"] == "jordan":
-        print("\n\n******** " + link["brand"] + " *********\n\n")
         headers = {
             "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36",
             "origin": "https://www.nike.com/tr",
@@ -215,7 +205,6 @@ def df_loops(link):
             jsonDetails = json.loads(mains)["props"]["pageProps"]["initialState"]
             styleNum = fstyleNum
             if fstyleNum not in jsonDetails["Threads"]["products"]:
-                print(fstyleNum)
                 urlst = URL.strip().split("/")[-1]
                 if urlst in jsonDetails["Threads"]["products"]:
                     styleNum = urlst
@@ -272,8 +261,6 @@ def df_loops(link):
             print("**")
 
     elif link["brand"] == "new balance":
-        print("\n\n******** NEWBALANCE *********\n\n")
-
         s = requests.Session()
         URL = link["link"]
         try:
@@ -341,7 +328,6 @@ def df_loops(link):
             print("**")
 
     elif link["brand"] == "reebok":
-        print("\n\n******** REEBOK *********\n\n")
         headers = {
             "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36",
             "Cookie": "",
@@ -399,7 +385,6 @@ def df_loops(link):
             print("**")
 
     elif link["brand"] == "adidas":
-        print("\n\n******** ADIDAS *********\n\n")
         adiheaders = {
             "origin": "www.adidas.com.tr",
             "cookie": "",
@@ -410,18 +395,13 @@ def df_loops(link):
         try:
             styleNum = URL.split("/")[-1]
             styleNum = re.findall("^(.*?)\.html", styleNum)[0]
-            print(URL)
             page = requests.get(URL.strip(), headers=adiheaders, timeout=10)
-            print(page)
             soup = BeautifulSoup(page.content, "html.parser")
             scripts = soup.find_all("script")
-            # for sc in script:
-            #     print(sc.text, end="\n\n")
             details = ""
             for script in scripts:
                 if script.text.find("@context") != -1:
                     details = script.text
-            # print(details)
             details = json.loads(details)
             sizes = requests.get(
                 "https://www.adidas.com.tr/api/products/"
@@ -442,7 +422,6 @@ def df_loops(link):
                 morePrice = extractPrice(
                     soup.find("div", class_="gl-price-item--crossed").text.strip()
                 )
-            print(price)
 
             if (TYPE != "update"):
                 insertIntoDb(
@@ -467,7 +446,6 @@ def df_loops(link):
             print("**")
 
     elif link["brand"] == "puma":
-        print("\n\n******** PUMA *********\n\n")
         headers = {
             "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36",
             "Cookie": "",
@@ -548,7 +526,6 @@ def df_loops(link):
             print("**")
 
     elif link["brand"] == "asics":
-        print("\n\n******** ASICS *********\n\n")
         headers = {
             "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36",
             "Cookie": "",
@@ -591,7 +568,6 @@ def df_loops(link):
             mappedSizes = []
             sizes = soup.find("div", class_="cl-size-input-container").find_all("label")
 
-            # print(sizes)
             for size in sizes:
                 try:
                     if size["data-stock"] != "0":
@@ -623,7 +599,6 @@ def df_loops(link):
             print("**")
 
     elif link["brand"] == "salomon":
-        print("\n\n******** salomon *********\n\n")
         headers = {
             "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36",
             "Cookie": "",
@@ -670,7 +645,6 @@ def df_loops(link):
             print("**")
 
     elif link["brand"] == "mizuno":
-        print("\n\n******** mizuno *********\n\n")
         headers = {
             "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36",
             "Cookie": "",
@@ -730,7 +704,6 @@ def df_loops(link):
             print("**")
 
     elif link["brand"] == "timberland":
-        print("\n\n******** timberland *********\n\n")
         headers = {
             "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36",
             "Cookie": "",
@@ -764,9 +737,6 @@ def df_loops(link):
                 nprice = extractPrice(soup.find("span", class_="new-price").text.strip())
                 oprice = extractPrice(soup.find("span", class_="old-price").text.strip())
 
-            print(nprice)
-            print(oprice)
-
             mappedSizes = []
             sizes = soup.find("div", class_="size-options").find_all("a", class_="")
             for size in sizes:
@@ -793,18 +763,19 @@ def df_loops(link):
 
 
 df = []
-print(products[0])
+counter = 0
 if (TYPE == "update"):
     random.shuffle(products)
-    print(products[0])
     links = [products[i:i + 5] for i in range(0, len(products), 5)]
 
     for chLink in links:
         with ThreadPool(5) as pool:
             for result in pool.map(df_loops, chLink):
                 df.append(result)
-        print('LOOOOOOOOOOOOP')
         time.sleep(2)
+        counter += 1
+        print(counter)
+        f.write(str(counter) + '\n')
 
 
 else:
@@ -815,6 +786,9 @@ else:
             for result in pool.map(df_loops, chLink):
                 df.append(result)
         time.sleep(2)
+        counter += 1
+        f.write(str(counter) + '\n')
+        
 
 f.close()
 
