@@ -1,7 +1,6 @@
 from multiprocessing.pool import ThreadPool
 import re
 import mysql.connector
-import pyperclip
 import requests
 from bs4 import BeautifulSoup
 import json
@@ -206,7 +205,6 @@ def df_loops(link):
 
 
             mains = soup.find("script", id="__NEXT_DATA__").text.strip()
-            pyperclip.copy(mains)
 
             fstyleNum = (
                 soup.find("li", class_="description-preview__style-color ncss-li")
@@ -214,7 +212,6 @@ def df_loops(link):
                 .replace("Stil: ", "")
             )
 
-            # pyperclip.copy(details)
             jsonDetails = json.loads(mains)["props"]["pageProps"]["initialState"]
             styleNum = fstyleNum
             if fstyleNum not in jsonDetails["Threads"]["products"]:
