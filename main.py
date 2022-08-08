@@ -800,10 +800,10 @@ print(products[0])
 if (TYPE == "update"):
     random.shuffle(products)
     print(products[0])
-    links = [products[i:i + 10] for i in range(0, len(products), 10)]
+    links = [products[i:i + 5] for i in range(0, len(products), 5)]
 
     for chLink in links:
-        with ThreadPool(10) as pool:
+        with ThreadPool(5) as pool:
             for result in pool.map(df_loops, chLink):
                 df.append(result)
         print('LOOOOOOOOOOOOP')
