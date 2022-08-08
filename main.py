@@ -182,7 +182,7 @@ mydb = mysql.connector.connect(
 mycursor = mydb.cursor(dictionary=True)
 
 if (TYPE == "update"):
-    mycursor.execute("select productId, link, (select brandName from brands where id = brandId) as brand from products where active=0")
+    mycursor.execute("select productId, link, (select brandName from brands where id = brandId) as brand from products")
 else:
     mycursor.execute("select * from links where inserted = 0")
 
