@@ -260,7 +260,7 @@ def df_loops(link):
                     mappedImages,
                 )
             else:
-                updateDb(link["productId"], morePrice + 60, price + 60, realSizes)
+                updateDb(link["productId"], fullPrice + 60, price + 60, availableSizesInNumber)
 
         except Exception as e:
             sucess = False
