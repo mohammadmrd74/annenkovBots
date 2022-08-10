@@ -98,6 +98,7 @@ def updateDb(productId, price, totalPrice, sizes):
                 [price, totalPrice, productId],
             )
         else: 
+            print(availableSizes)
             mycursor.execute(
                 "UPDATE products SET price=%s, totalPrice = %s,  active=1 where productId = %s",
                 [price, totalPrice, productId],
@@ -173,13 +174,14 @@ mydb = mysql.connector.connect(
 mycursor = mydb.cursor(dictionary=True)
 
 if (TYPE == "update"):
-    mycursor.execute("select productId, link, (select brandName from brands where id = brandId) as brand from products")
+    mycursor.execute("select productId, link, (select brandName from brands where id = brandId) as brand from products where productId= 2962")
 else:
     mycursor.execute("select * from links where inserted = 0")
 
 products = mycursor.fetchall()
 # print(links)
 def df_loops(link):
+    print(link)
     if link["brand"] == "nike" or link["brand"] == "jordan":
         headers = {
             "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36",
@@ -392,6 +394,7 @@ def df_loops(link):
         }
         URL = link["link"]
 
+
         try:
             styleNum = URL.split("/")[-1]
             styleNum = re.findall("^(.*?)\.html", styleNum)[0]
@@ -416,12 +419,15 @@ def df_loops(link):
                 )
             )
             mappedSizes = list(map(lambda x: x["size"], filtered))
-            price = extractPrice(str(details["offers"]["price"]))
+            print(details["offers"]["price"])
+            price = str(details["offers"]["price"])
             morePrice = price
+            print(price)
             if soup.find("div", class_="gl-price-item--crossed"):
                 morePrice = extractPrice(
-                    soup.find("div", class_="gl-price-item--crossed").text.strip()
+                    soup.find("div", class_="gl-price-item--crossed").text.strip(), '.'
                 )
+            print(morePrice)
 
             if (TYPE != "update"):
                 insertIntoDb(
@@ -630,9 +636,10 @@ def df_loops(link):
             sizes = list(map(lambda x: x["tanim"][x["tanim"].find('(')+1:x["tanim"].find(')')], filtered))
 
             if (TYPE != "update"):
-                insertIntoDb(link, title, price, price, "", mappedSizes, mappedImages)
+                insertIntoDb(link, title, price, price, "", sizes, mappedImages)
             else:
-                updateDb(link["productId"], price, price, mappedSizes)
+                print(link["productId"], price, price, sizes)
+                updateDb(link["productId"], price, price, sizes)
 
         except Exception as e:
             sucess = False
@@ -779,10 +786,10 @@ if (TYPE == "update"):
 
 
 else:
-    links = [products[i : i + 2] for i in range(0, len(products), 50)]
+    links = [products[i : i + 10] for i in range(0, len(products), 10)]
 
     for chLink in links:
-        with ThreadPool(2) as pool:
+        with ThreadPool(10) as pool:
             for result in pool.map(df_loops, chLink):
                 df.append(result)
         time.sleep(2)

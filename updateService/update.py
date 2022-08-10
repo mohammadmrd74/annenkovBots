@@ -412,7 +412,7 @@ def df_loops(link):
                 )
             )
             mappedSizes = list(map(lambda x: x["size"], filtered))
-            price = extractPrice(str(details["offers"]["price"]))
+            price = str(details["offers"]["price"])
             morePrice = price
             if soup.find("div", class_="gl-price-item--crossed"):
                 morePrice = extractPrice(
@@ -631,9 +631,9 @@ def df_loops(link):
             sizes = list(map(lambda x: x["tanim"][x["tanim"].find('(')+1:x["tanim"].find(')')], filtered))
 
             if (TYPE != "update"):
-                insertIntoDb(link, title, price, price, "", mappedSizes, mappedImages)
+                insertIntoDb(link, title, price, price, "", sizes, mappedImages)
             else:
-                updateDb(link["productId"], price, price, mappedSizes)
+                updateDb(link["productId"], price, price, sizes)
 
         except Exception as e:
             sucess = False
