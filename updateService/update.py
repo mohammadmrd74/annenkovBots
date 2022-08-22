@@ -58,15 +58,23 @@ def updateDb(productId, price, totalPrice, sizes):
         print("sizesToInsert", sizesToInsert)
         print("sizezToUpdate", sizezToUpdate)
         if len(sizesToInsert):
-            #   print('sizesToInsert', productId)
             for size in sizesToInsert:
                 mycursor.execute("SELECT sizeId from size where size = %s", [size])
                 sizeId = mycursor.fetchall()
-                mycursor.execute(
-                    "INSERT INTO linkSizeAndProduct(sizeId, productId) VALUES (%s, %s)",
+                mycursor.execute("select sizeId from linkSizeAndProduct lsp where productId = %s and sizeId = %s and available = 0", [productId, sizeId[0]["sizeId"]])
+                isSizeThere = mycursor.fetchall()
+                if( len(isSizeThere[0]) > 0):
+                    mycursor.execute(
+                    "UPDATE linkSizeAndProduct SET available = 1  where sizeId = %s AND productId = %s",
                     [sizeId[0]["sizeId"], productId],
-                )
-                mydb.commit()
+                    )
+                    mydb.commit()
+                else :
+                    mycursor.execute(
+                        "INSERT INTO linkSizeAndProduct(sizeId, productId) VALUES (%s, %s)",
+                        [sizeId[0]["sizeId"], productId],
+                    )
+                    mydb.commit()
 
         if len(sizezToUpdate):
             #   print('sizezToUpdate', productId)

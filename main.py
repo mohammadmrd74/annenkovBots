@@ -60,25 +60,39 @@ def extractPrice(price, sep="."):
 
 
 def updateDb(productId, price, totalPrice, sizes):
+    print(sizes)
     sem.acquire()
     try:
         mycursor.execute(
-            "select size from size join linkSizeAndProduct lsp on size.sizeId = lsp.sizeId where productId = %s",
+            "select size from size join linkSizeAndProduct lsp on size.sizeId = lsp.sizeId where productId = %s and available = 1",
             [productId],
         )
         beforeSizes = mycursor.fetchall()
         beforeSizes = list(map(lambda x: x["size"], beforeSizes))
         sizesToInsert = Diff(sizes, beforeSizes)
         sizezToUpdate = Diff(beforeSizes, sizes)
+        print("sizesToInsert", sizesToInsert)
+        print("sizezToUpdate", sizezToUpdate)
         if len(sizesToInsert):
             for size in sizesToInsert:
                 mycursor.execute("SELECT sizeId from size where size = %s", [size])
                 sizeId = mycursor.fetchall()
-                mycursor.execute(
-                    "INSERT INTO linkSizeAndProduct(sizeId, productId) VALUES (%s, %s)",
+                mycursor.execute("select sizeId from linkSizeAndProduct lsp where productId = %s and sizeId = %s and available = 0", [productId, sizeId[0]["sizeId"]])
+                isSizeThere = mycursor.fetchall()
+                print(22, isSizeThere)
+                if( len(isSizeThere[0]) > 0):
+                    mycursor.execute(
+                    "UPDATE linkSizeAndProduct SET available = 1  where sizeId = %s AND productId = %s",
                     [sizeId[0]["sizeId"], productId],
-                )
-                mydb.commit()
+                    )
+                    mydb.commit()
+                else :
+                    mycursor.execute(
+                        "INSERT INTO linkSizeAndProduct(sizeId, productId) VALUES (%s, %s)",
+                        [sizeId[0]["sizeId"], productId],
+                    )
+                    mydb.commit()
+                    
 
         if len(sizezToUpdate):
             for size in sizezToUpdate:
@@ -174,7 +188,7 @@ mydb = mysql.connector.connect(
 mycursor = mydb.cursor(dictionary=True)
 
 if (TYPE == "update"):
-    mycursor.execute("select productId, link, (select brandName from brands where id = brandId) as brand from products")
+    mycursor.execute("select productId, link, (select brandName from brands where id = brandId) as brand from products where productId = 2709")
 else:
     mycursor.execute("select * from links where inserted = 0")
 
