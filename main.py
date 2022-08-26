@@ -12,9 +12,66 @@ import threading
 sem = threading.Semaphore()
 path = os.path.abspath(os.getcwd())
 
+AdidasMenSize = {
+    "4": "36",
+    "4.5": "36 2/3",
+    "5": "37 1/3",
+    "5.5": "38",
+    "6": "38 2/3",
+    "6.5": "39 1/3",
+    "7": "40",
+    "7.5": "40 2/3",
+    "8": "41 1/3",
+    "8.5": "42",
+    "9": "42 2/3",
+    "9.5": "43 1/3",
+    "10": "44",
+    "10.5": "44 2/3",
+    "11": "45 1/3",
+    "11.5": "46",
+    "12": "46 2/3",
+    "12.5": "47 1/3",
+    "13": "48",
+    "13.5": "48 2/3",
+    "14": "49 1/3",
+    "14.5": "50",
+    "15": "50 2/3",
+    "16": "51 1/3",
+    "17": "52 2/3",
+    "18": "53 1/3",
+    "19": "54 2/3",
+    "20": "55 2/3",
+}
+
+AdidasWomenSize = {
+    "5": "36",
+    "5.5": "36 2/3",
+    "6": "37 1/3",
+    "6.5": "38",
+    "7": "38 2/3",
+    "7.5": "39 1/3",
+    "8": "40",
+    "8.5": "40 2/3",
+    "9": "41 1/3",
+    "9.5": "42",
+    "10": "42 2/3",
+    "10.5": "43 1/3",
+    "11": "44",
+    "11.5": "44 2/3",
+    "12": "45 1/3",
+    "12.5": "46",
+    "13": "46 2/3",
+    "13.5": "47 1/3",
+    "14": "48",
+    "14.5": "48 2/3",
+    "15": "49 1/3",
+    "15.5": "50",
+}
+
+
 sucess = False
-# TYPE = "insert"
-TYPE = "update"
+TYPE = "insert"
+# TYPE = "update"
 
 
 f = open(path + "/errorLinks.txt", "a")
@@ -25,18 +82,18 @@ def Diff(first, second):
 
 
 def disableProduct(id):
-    print('disableProduct', id)
+    print("disableProduct", id)
     sem.acquire()
     try:
         mycursor.execute("UPDATE products SET active=0 where productId = %s", [id])
         mydb.commit()
         mycursor.execute("UPDATE links SET active=0 where productId = %s", [id])
         mydb.commit()
-    except Exception as e: 
+    except Exception as e:
         print(e)
         f.write("disableProduct error\n")
     sem.release()
-    print('disableProduct rel', id)
+    print("disableProduct rel", id)
 
 
 def chunks(lst, n):
@@ -77,22 +134,24 @@ def updateDb(productId, price, totalPrice, sizes):
             for size in sizesToInsert:
                 mycursor.execute("SELECT sizeId from size where size = %s", [size])
                 sizeId = mycursor.fetchall()
-                mycursor.execute("select sizeId from linkSizeAndProduct lsp where productId = %s and sizeId = %s and available = 0", [productId, sizeId[0]["sizeId"]])
+                mycursor.execute(
+                    "select sizeId from linkSizeAndProduct lsp where productId = %s and sizeId = %s and available = 0",
+                    [productId, sizeId[0]["sizeId"]],
+                )
                 isSizeThere = mycursor.fetchall()
                 print(22, isSizeThere)
-                if( len(isSizeThere[0]) > 0):
+                if len(isSizeThere[0]) > 0:
                     mycursor.execute(
-                    "UPDATE linkSizeAndProduct SET available = 1  where sizeId = %s AND productId = %s",
-                    [sizeId[0]["sizeId"], productId],
+                        "UPDATE linkSizeAndProduct SET available = 1  where sizeId = %s AND productId = %s",
+                        [sizeId[0]["sizeId"], productId],
                     )
                     mydb.commit()
-                else :
+                else:
                     mycursor.execute(
                         "INSERT INTO linkSizeAndProduct(sizeId, productId) VALUES (%s, %s)",
                         [sizeId[0]["sizeId"], productId],
                     )
                     mydb.commit()
-                    
 
         if len(sizezToUpdate):
             for size in sizezToUpdate:
@@ -103,15 +162,18 @@ def updateDb(productId, price, totalPrice, sizes):
                     [sizeId[0]["sizeId"], productId],
                 )
                 mydb.commit()
-        mycursor.execute("SELECT count(*) as count from linkSizeAndProduct where productId = %s and available = 1", [productId])
+        mycursor.execute(
+            "SELECT count(*) as count from linkSizeAndProduct where productId = %s and available = 1",
+            [productId],
+        )
         availableSizes = mycursor.fetchall()
         availableSizes = availableSizes[0]["count"]
-        if(availableSizes == 0):
+        if availableSizes == 0:
             mycursor.execute(
                 "UPDATE products SET price=%s, totalPrice = %s,  active=0 where productId = %s",
                 [price, totalPrice, productId],
             )
-        else: 
+        else:
             print(availableSizes)
             mycursor.execute(
                 "UPDATE products SET price=%s, totalPrice = %s,  active=1 where productId = %s",
@@ -140,7 +202,7 @@ def insertIntoDb(
             price,
             totalPrice,
             styleNum,
-            1,
+            link["currencyId"],
             brandId[0]["id"],
             link["mainAndCategId"],
             link["typeId"],
@@ -187,8 +249,10 @@ mydb = mysql.connector.connect(
 
 mycursor = mydb.cursor(dictionary=True)
 
-if (TYPE == "update"):
-    mycursor.execute("select productId, link, (select brandName from brands where id = brandId) as brand from products")
+if TYPE == "update":
+    mycursor.execute(
+        "select productId, link, (select brandName from brands where id = brandId) as brand from products where productId= 1133"
+    )
 else:
     mycursor.execute("select * from links where inserted = 0")
 
@@ -208,7 +272,6 @@ def df_loops(link):
             s = requests.Session()
             page = s.get(URL, headers=headers, timeout=10)
             soup = BeautifulSoup(page.content, "html.parser")
-
 
             mains = soup.find("script", id="__NEXT_DATA__").text.strip()
 
@@ -243,7 +306,9 @@ def df_loops(link):
             price = jsonDetails["Threads"]["products"][styleNum]["currentPrice"]
             fullPrice = jsonDetails["Threads"]["products"][styleNum]["fullPrice"]
             allSizes = jsonDetails["Threads"]["products"][styleNum]["skus"]
-            availableSizes = jsonDetails["Threads"]["products"][styleNum]["availableSkus"]
+            availableSizes = jsonDetails["Threads"]["products"][styleNum][
+                "availableSkus"
+            ]
             title = jsonDetails["Threads"]["products"][styleNum]["title"]
             availableSizesInNumber = []
             for size in allSizes:
@@ -253,8 +318,7 @@ def df_loops(link):
             price = extractPrice(str(price), ",")
             fullPrice = extractPrice(str(fullPrice), ",")
 
-         
-            if (TYPE != "update"):
+            if TYPE != "update":
                 insertIntoDb(
                     link,
                     title,
@@ -265,13 +329,18 @@ def df_loops(link):
                     mappedImages,
                 )
             else:
-                updateDb(link["productId"], fullPrice + 60, price + 60, availableSizesInNumber)
+                updateDb(
+                    link["productId"],
+                    fullPrice + 60,
+                    price + 60,
+                    availableSizesInNumber,
+                )
 
         except Exception as e:
             sucess = False
-            if (TYPE == "update"):
-                disableProduct(link['productId'])
-                f.write(str(link['link']) + '\n')
+            if TYPE == "update":
+                disableProduct(link["productId"])
+                f.write(str(link["link"]) + "\n")
             print(link["link"])
             print(e)
             print("**")
@@ -322,7 +391,7 @@ def df_loops(link):
                         realSizes.append(size.text.strip())
                 except KeyError:
                     realSizes.append(size.text.strip())
-            if (TYPE != "update"):
+            if TYPE != "update":
                 insertIntoDb(
                     link,
                     title,
@@ -336,9 +405,9 @@ def df_loops(link):
                 updateDb(link["productId"], morePrice, price, realSizes)
         except Exception as e:
             sucess = False
-            if (TYPE == "update"):
-                disableProduct(link['productId'])
-                f.write(str(link['link']) + '\n')
+            if TYPE == "update":
+                disableProduct(link["productId"])
+                f.write(str(link["link"]) + "\n")
             print(link["link"])
             print(e)
             print("**")
@@ -349,7 +418,7 @@ def df_loops(link):
             "Cookie": "",
         }
 
-        try: 
+        try:
             s = requests.Session()
             URL = link["link"]
             page = s.get(URL.strip(), timeout=10)
@@ -372,14 +441,16 @@ def df_loops(link):
                 mainTotalPrice = extractPrice(price[1].text.strip())
 
             styleNum = (
-                soup.find("div", class_="p-info").find("p", class_="gl-label").text.strip()
+                soup.find("div", class_="p-info")
+                .find("p", class_="gl-label")
+                .text.strip()
             )
             sizes = soup.find("div", class_="size-options").find_all("option")
             realSizes = []
             for size in sizes:
                 realSizes.append(size.text.strip().replace(",", "."))
 
-            if (TYPE != "update"):
+            if TYPE != "update":
                 insertIntoDb(
                     link,
                     title.replace("Ayakkabı", ""),
@@ -393,21 +464,20 @@ def df_loops(link):
                 updateDb(link["productId"], mainTotalPrice, mainPrice, realSizes)
         except Exception as e:
             sucess = False
-            if (TYPE == "update"):
-                disableProduct(link['productId'])
-                f.write(str(link['link']) + '\n')
+            if TYPE == "update":
+                disableProduct(link["productId"])
+                f.write(str(link["link"]) + "\n")
             print(link["link"])
             print(e)
             print("**")
 
-    elif link["brand"] == "adidas":
+    elif link["brand"] == "adidas" and link["currencyId"] == 1:
         adiheaders = {
             "origin": "www.adidas.com.tr",
             "cookie": "",
             "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36",
         }
         URL = link["link"]
-
 
         try:
             styleNum = URL.split("/")[-1]
@@ -439,11 +509,11 @@ def df_loops(link):
             print(price)
             if soup.find("div", class_="gl-price-item--crossed"):
                 morePrice = extractPrice(
-                    soup.find("div", class_="gl-price-item--crossed").text.strip(), '.'
+                    soup.find("div", class_="gl-price-item--crossed").text.strip(), "."
                 )
             print(morePrice)
 
-            if (TYPE != "update"):
+            if TYPE != "update":
                 insertIntoDb(
                     link,
                     details["name"].replace("Ayakkabı", ""),
@@ -458,9 +528,90 @@ def df_loops(link):
 
         except Exception as e:
             sucess = False
-            if (TYPE == "update"):
-                disableProduct(link['productId'])
-                f.write(str(link['link']) + '\n')
+            if TYPE == "update":
+                disableProduct(link["productId"])
+                f.write(str(link["link"]) + "\n")
+            print(link["link"])
+            print(e)
+            print("**")
+
+    elif link["brand"] == "adidas" and link["currencyId"] == 2:
+        adiheaders = {
+            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+            "accept-language": "en-US,en;q=0.9,fa;q=0.8,de;q=0.7",
+            "cache-control": "max-age=0",
+            "sec-ch-ua": '" Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"',
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": '"Linux"',
+            "sec-fetch-dest": "document",
+            "sec-fetch-mode": "navigate",
+            "sec-fetch-site": "same-origin",
+            "sec-fetch-user": "?1",
+            "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36",
+            "upgrade-insecure-requests": "1",
+        }
+        URL = link["link"]
+
+        try:
+            styleNum = URL.split("/")[-1]
+            styleNum = re.findall("^(.*?)\.html", styleNum)[0]
+            page = requests.get(URL.strip(), headers=adiheaders, timeout=10)
+            soup = BeautifulSoup(page.content, "html.parser")
+            scripts = soup.find_all("script")
+            details = ""
+            for script in scripts:
+                if script.text.find("@context") != -1:
+                    details = script.text
+            details = json.loads(details)
+            sizes = requests.get(
+                "https://www.adidas.com/api/products/"
+                + styleNum
+                + "/availability?sitePath=us",
+                headers=adiheaders,
+            )
+            filtered = list(
+                filter(
+                    lambda var: var["availability_status"] == "IN_STOCK",
+                    sizes.json()["variation_list"],
+                )
+            )
+            mappedSizes = list(map(lambda x: x["size"], filtered))
+            print(details["offers"]["price"])
+            price = str(details["offers"]["price"])
+            morePrice = price
+            print(price)
+            if soup.find("div", class_="gl-price-item--crossed"):
+                morePrice = extractPrice(
+                    soup.find("div", class_="gl-price-item--crossed").text.strip(), "."
+                )
+            print(morePrice)
+
+            normalizeSize = []
+            if(link["mainAndCategId"] == 1):
+                for size in mappedSizes:
+                    normalizeSize.append(AdidasMenSize[size])
+            elif(link["mainAndCategId"] == 4):
+                for size in mappedSizes:
+                    normalizeSize.append(AdidasWomenSize[size])
+
+            if TYPE != "update":
+                insertIntoDb(
+                    link,
+                    details["name"],
+                    morePrice,
+                    price,
+                    styleNum,
+                    normalizeSize,
+                    details["image"],
+                )
+            else:
+                updateDb(link["productId"], morePrice, price, normalizeSize)
+
+        except Exception as e:
+            sucess = False
+            if TYPE == "update":
+                disableProduct(link["productId"])
+                f.write(str(link["link"]) + "\n")
             print(link["link"])
             print(e)
             print("**")
@@ -495,9 +646,10 @@ def df_loops(link):
             prices1 = extractPrice(prices1)
             prices2 = extractPrice(prices2)
             price = extractPrice(soup.find("span", class_="price").text.strip())
-            if prices1 is None or prices2 is None:
-                prices1 = price
-                prices2 = price
+            if( prices1 is None or prices1 == 1):
+                prices1 = prices2
+            if( prices2 is None or prices2 == 1):
+                prices2 = prices1
             styleNum = (
                 soup.find("div", class_="product-article")
                 .find("span", class_="product-article__value")
@@ -522,7 +674,7 @@ def df_loops(link):
                     if founded["products"].count(pr) != 0:
                         foundedSizes.append(size["label"])
 
-            if (TYPE != "update"):
+            if TYPE != "update":
                 insertIntoDb(
                     link,
                     title.replace("Ayakkabı", ""),
@@ -537,9 +689,9 @@ def df_loops(link):
 
         except Exception as e:
             sucess = False
-            if (TYPE == "update"):
-                disableProduct(link['productId'])
-                f.write(str(link['link']) + '\n')
+            if TYPE == "update":
+                disableProduct(link["productId"])
+                f.write(str(link["link"]) + "\n")
             print("puma")
             print(link)
             print(e)
@@ -595,7 +747,7 @@ def df_loops(link):
                 except KeyError:
                     continue
 
-            if (TYPE != "update"):
+            if TYPE != "update":
                 insertIntoDb(
                     link,
                     title,
@@ -610,9 +762,9 @@ def df_loops(link):
 
         except Exception as e:
             sucess = False
-            if (TYPE == "update"):
-                disableProduct(link['productId'])
-                f.write(str(link['link']) + '\n')
+            if TYPE == "update":
+                disableProduct(link["productId"])
+                f.write(str(link["link"]) + "\n")
             print("asics")
             print(link)
             print(e)
@@ -634,22 +786,43 @@ def df_loops(link):
             mappedImages = []
             for image in images:
                 try:
-                    if(image["src"]):
-                        mappedImages.append("https://www.salomon.com.tr/" + image["src"])
+                    if image["src"]:
+                        mappedImages.append(
+                            "https://www.salomon.com.tr/" + image["src"]
+                        )
                 except KeyError:
-                        continue
-
+                    continue
 
             title = soup.find("div", class_="ProductName").text.strip()
-            price = extractPrice(soup.find("span", class_="spanFiyat").text.strip(), '.')
-            styleNum = soup.find("span", class_="productcode").text.strip().replace('(', '').replace(')','')
+            price = extractPrice(
+                soup.find("span", class_="spanFiyat").text.strip(), "."
+            )
+            styleNum = (
+                soup.find("span", class_="productcode")
+                .text.strip()
+                .replace("(", "")
+                .replace(")", "")
+            )
             mappedSizes = []
             scripts = soup.find("body").find_all("script")[0].text.strip()
-            scripts = json.loads(scripts[scripts.find('{'):(scripts.find(';'))])
-            filtered = list(filter(lambda var: var["stokAdedi"] > 0 and var["ekSecenekTipiTanim"] == "Beden", scripts["productVariantData"]))
-            sizes = list(map(lambda x: x["tanim"][x["tanim"].find('(')+1:x["tanim"].find(')')], filtered))
+            scripts = json.loads(scripts[scripts.find("{") : (scripts.find(";"))])
+            filtered = list(
+                filter(
+                    lambda var: var["stokAdedi"] > 0
+                    and var["ekSecenekTipiTanim"] == "Beden",
+                    scripts["productVariantData"],
+                )
+            )
+            sizes = list(
+                map(
+                    lambda x: x["tanim"][
+                        x["tanim"].find("(") + 1 : x["tanim"].find(")")
+                    ],
+                    filtered,
+                )
+            )
 
-            if (TYPE != "update"):
+            if TYPE != "update":
                 insertIntoDb(link, title, price, price, "", sizes, mappedImages)
             else:
                 print(link["productId"], price, price, sizes)
@@ -657,9 +830,9 @@ def df_loops(link):
 
         except Exception as e:
             sucess = False
-            if (TYPE == "update"):
-                disableProduct(link['productId'])
-                f.write(str(link['link']) + '\n')
+            if TYPE == "update":
+                disableProduct(link["productId"])
+                f.write(str(link["link"]) + "\n")
             print("salomon")
             print(link)
             print(e)
@@ -687,9 +860,9 @@ def df_loops(link):
                         mappedImages.append(image["href"])
                 except KeyError:
                     continue
-            sizes = soup.find_all("div", class_="pos-r fl col-12 ease variantList var-new")[
-                0
-            ]
+            sizes = soup.find_all(
+                "div", class_="pos-r fl col-12 ease variantList var-new"
+            )[0]
             realSize = sizes.find_all("a")
             mappedSizes = []
             for size in realSize:
@@ -707,18 +880,24 @@ def df_loops(link):
                 .replace("Koyu", "")
                 .replace("Kadin", "")
             )
-            if (TYPE != "update"):
+            if TYPE != "update":
                 insertIntoDb(
-                    link, title, price, price, styleNum.text.strip(), mappedSizes, mappedImages
+                    link,
+                    title,
+                    price,
+                    price,
+                    styleNum.text.strip(),
+                    mappedSizes,
+                    mappedImages,
                 )
             else:
                 updateDb(link["productId"], price, price, mappedSizes)
 
         except Exception as e:
             sucess = False
-            if (TYPE == "update"):
-                disableProduct(link['productId'])
-                f.write(str(link['link']) + '\n')
+            if TYPE == "update":
+                disableProduct(link["productId"])
+                f.write(str(link["link"]) + "\n")
             print("salomon")
             print(link)
             print(e)
@@ -736,27 +915,34 @@ def df_loops(link):
             page = s.get(URL.strip(), timeout=10)
             soup = BeautifulSoup(page.content, "html.parser")
 
-            images = soup.find("div", class_="main-gallery").find_all("img", class_="image-blur")
+            images = soup.find("div", class_="main-gallery").find_all(
+                "img", class_="image-blur"
+            )
             mappedImages = []
             for image in images:
                 try:
-                    if(image["src"]):
+                    if image["src"]:
                         mappedImages.append(image["data-image"])
                 except KeyError:
-                        continue
-
+                    continue
 
             title = soup.find("h1", class_="p-name").text.strip()
             # styleNum = soup.find("span", class_="sk-model-alt-title").text.strip()
 
-            nprice = ''
-            oprice = ''
-            if(soup.find("span", class_="one-price")): 
-                oprice = extractPrice(soup.find("span", class_="one-price").text.strip())
+            nprice = ""
+            oprice = ""
+            if soup.find("span", class_="one-price"):
+                oprice = extractPrice(
+                    soup.find("span", class_="one-price").text.strip()
+                )
                 nprice = oprice
-            if(soup.find("span", class_="new-price")):
-                nprice = extractPrice(soup.find("span", class_="new-price").text.strip())
-                oprice = extractPrice(soup.find("span", class_="old-price").text.strip())
+            if soup.find("span", class_="new-price"):
+                nprice = extractPrice(
+                    soup.find("span", class_="new-price").text.strip()
+                )
+                oprice = extractPrice(
+                    soup.find("span", class_="old-price").text.strip()
+                )
 
             mappedSizes = []
             sizes = soup.find("div", class_="size-options").find_all("a", class_="")
@@ -765,16 +951,24 @@ def df_loops(link):
                     mappedSizes.append(size.text.strip())
                 except KeyError:
                     continue
-            title = title.replace("Ayakkabı", "").replace("Spor", "").replace("Erkek", "").replace("Nubuk", "").replace("Yeşil", "").replace("Koyu", "").replace("Kadin", "")
-            if (TYPE != "update"):
+            title = (
+                title.replace("Ayakkabı", "")
+                .replace("Spor", "")
+                .replace("Erkek", "")
+                .replace("Nubuk", "")
+                .replace("Yeşil", "")
+                .replace("Koyu", "")
+                .replace("Kadin", "")
+            )
+            if TYPE != "update":
                 insertIntoDb(link, title, oprice, nprice, "", mappedSizes, mappedImages)
             else:
                 updateDb(link["productId"], oprice, nprice, mappedSizes)
         except Exception as e:
             sucess = False
-            if (TYPE == "update"):
-                disableProduct(link['productId'])
-                f.write(str(link['link']) + '\n')
+            if TYPE == "update":
+                disableProduct(link["productId"])
+                f.write(str(link["link"]) + "\n")
             print("timberland error")
             print(link)
             print(e)
@@ -785,9 +979,9 @@ def df_loops(link):
 
 df = []
 counter = 0
-if (TYPE == "update"):
+if TYPE == "update":
     random.shuffle(products)
-    links = [products[i:i + 5] for i in range(0, len(products), 5)]
+    links = [products[i : i + 5] for i in range(0, len(products), 5)]
 
     for chLink in links:
         with ThreadPool(5) as pool:
@@ -796,7 +990,7 @@ if (TYPE == "update"):
         time.sleep(2)
         counter += 1
         print(counter)
-        f.write(str(counter) + '\n')
+        f.write(str(counter) + "\n")
 
 
 else:
@@ -808,10 +1002,7 @@ else:
                 df.append(result)
         time.sleep(2)
         counter += 1
-        f.write(str(counter) + '\n')
-        
+        f.write(str(counter) + "\n")
+
 
 f.close()
-
-
-

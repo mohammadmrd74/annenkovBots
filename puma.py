@@ -88,7 +88,7 @@ def extractPrice(price, sep='.'):
 
 
 
-URL = "https://tr.puma.com/st-runner-v2-mesh-ayakkab-366811-06.html"
+URL = "https://tr.puma.com/smash-v2-buck-ayakkab-365160-08.html"
 
 print("\n\n******** puma *********\n\n")
 headers = {
@@ -119,9 +119,10 @@ prices2 = soup.find_all("span", class_="price")[1].text.strip()
 prices1 = extractPrice(prices1)
 prices2 = extractPrice(prices2)
 price = extractPrice(soup.find("span", class_="price").text.strip())
-if( prices1 is None or prices2 is None):
-    prices1 = price
-    prices2 = price
+if( prices1 is None or prices1 == 1):
+    prices1 = prices2
+if( prices2 is None or prices2 == 1):
+    prices2 = prices1
 styleNum = soup.find("div", class_="product-article").find("span", class_="product-article__value").text.strip()
 color = soup.find("span", class_="colors__text-name").text.strip()
 details = ''
@@ -138,6 +139,11 @@ for size in allSizes:
       if(founded["products"].count(pr) != 0):
           foundedSizes.append(size["label"])
 # print(mappedImages)
+
+print(foundedSizes)
+print(prices1)
+print(prices2)
+
 
 # print(link, title.replace('Ayakkabı', ''), price, price, styleNum, foundedSizes, mappedImages)
 # insertIntoDb(link, title.replace('Ayakkabı', ''), price, price, styleNum, foundedSizes, mappedImages)
