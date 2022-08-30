@@ -196,7 +196,7 @@ def insertIntoDb(
     try:
         mycursor.execute("SELECT id from brands where brandName = %s", [link["brand"]])
         brandId = mycursor.fetchall()
-        sql = "INSERT INTO products (title, price, totalPrice, styleNumber, currencyId, brandId, mainAndCategoryId, typeId, linkId, link, colorId, sColorId) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        sql = "INSERT INTO products (title, price, totalPrice, styleNumber, currencyId, brandId, mainAndCategoryId, typeId, linkId, link, colorId, sColorId, website) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
         val = (
             title,
             price,
@@ -210,6 +210,7 @@ def insertIntoDb(
             link["link"],
             link["colorId"],
             link["sColorId"],
+            link["website"]
         )
         mycursor.execute(sql, val)
         mydb.commit()
@@ -251,7 +252,7 @@ mycursor = mydb.cursor(dictionary=True)
 
 if TYPE == "update":
     mycursor.execute(
-        "select productId, link, (select brandName from brands where id = brandId) as brand from products where deleted = 0"
+        "select productId, link, website from products where deleted = 0"
     )
 else:
     mycursor.execute("select * from links where inserted = 0")
@@ -260,7 +261,7 @@ products = mycursor.fetchall()
 # print(links)
 def df_loops(link):
     print(link)
-    if link["brand"] == "nike" or link["brand"] == "jordan":
+    if link["website"] == "nike" or link["website"] == "jordan":
         headers = {
             "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36",
             "origin": "https://www.nike.com/tr",
@@ -345,7 +346,59 @@ def df_loops(link):
             print(e)
             print("**")
 
-    elif link["brand"] == "new balance":
+    
+    elif link["website"] == "fashfed":
+        print("\n\n******** FASHFED *********\n\n")
+        headers = {
+        'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
+        'Cookie': ''
+        }
+
+        s = requests.Session()
+        URL =  link["link"]
+        page = s.get(URL.strip())
+        soup = BeautifulSoup(page.content, "html.parser")
+
+        images = soup.find_all("img", class_="js-fancybox-lg")
+        mappedImages = []
+        for image in images:
+            try:
+                if(image["src"]):
+                    mappedImages.append(image["src"])
+            except KeyError:
+                    continue
+
+
+        title = soup.find("div", class_="product__info--title").text.strip()
+        nprice = extractPrice(soup.find("span", class_="price__new").text.strip(), '.')
+        oprice = soup.find("span", class_="price__old")
+        if (oprice):
+            oprice = extractPrice(oprice.text.strip(), '.')
+        else:
+            oprice = nprice
+        styleNum = soup.find("div", class_="product__collapse--content").find("p").text.replace('Ürün Kodu:', '').replace(" ", "").replace("\n", "").strip()
+        mappedSizes = []
+        scripts = soup.find("select", class_="js-variants-select").find_all("option")
+        for size in scripts:
+            try:
+                if(size["value"]):
+                    mappedSizes.append(size["value"].replace(",",'.'))
+            except KeyError:
+                    continue
+        if TYPE != "update":
+            insertIntoDb(
+                link,
+                title,
+                oprice,
+                nprice,
+                styleNum,
+                mappedSizes,
+                mappedImages,
+            )
+        else:
+            updateDb(link["productId"], nprice, oprice, mappedSizes)
+    
+    elif link["website"] == "new balance":
         s = requests.Session()
         URL = link["link"]
         try:
@@ -412,7 +465,7 @@ def df_loops(link):
             print(e)
             print("**")
 
-    elif link["brand"] == "reebok":
+    elif link["website"] == "reebok":
         headers = {
             "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36",
             "Cookie": "",
@@ -471,7 +524,7 @@ def df_loops(link):
             print(e)
             print("**")
 
-    elif link["brand"] == "adidas" and link["currencyId"] == 1:
+    elif link["website"] == "adidas" and link["currencyId"] == 1:
         adiheaders = {
             "origin": "www.adidas.com.tr",
             "cookie": "",
@@ -535,7 +588,7 @@ def df_loops(link):
             print(e)
             print("**")
 
-    elif link["brand"] == "adidas" and link["currencyId"] == 2:
+    elif link["website"] == "adidas" and link["currencyId"] == 2:
         adiheaders = {
             "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
             "accept-language": "en-US,en;q=0.9,fa;q=0.8,de;q=0.7",
@@ -616,7 +669,7 @@ def df_loops(link):
             print(e)
             print("**")
 
-    elif link["brand"] == "puma":
+    elif link["website"] == "puma":
         headers = {
             "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36",
             "Cookie": "",
@@ -697,7 +750,7 @@ def df_loops(link):
             print(e)
             print("**")
 
-    elif link["brand"] == "asics":
+    elif link["website"] == "asics":
         headers = {
             "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36",
             "Cookie": "",
@@ -770,7 +823,7 @@ def df_loops(link):
             print(e)
             print("**")
 
-    elif link["brand"] == "salomon":
+    elif link["website"] == "salomon":
         headers = {
             "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36",
             "Cookie": "",
@@ -838,7 +891,7 @@ def df_loops(link):
             print(e)
             print("**")
 
-    elif link["brand"] == "mizuno":
+    elif link["website"] == "mizuno":
         headers = {
             "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36",
             "Cookie": "",
@@ -903,7 +956,7 @@ def df_loops(link):
             print(e)
             print("**")
 
-    elif link["brand"] == "timberland":
+    elif link["website"] == "timberland":
         headers = {
             "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36",
             "Cookie": "",
