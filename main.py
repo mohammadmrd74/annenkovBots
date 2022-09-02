@@ -70,8 +70,8 @@ AdidasWomenSize = {
 
 
 sucess = False
-TYPE = "insert"
-# TYPE = "update"
+# TYPE = "insert"
+TYPE = "update"
 
 
 f = open(path + "/errorLinks.txt", "a")
@@ -252,7 +252,7 @@ mycursor = mydb.cursor(dictionary=True)
 
 if TYPE == "update":
     mycursor.execute(
-        "select productId, link, website from products where deleted = 0"
+        "select productId, link, website from products where deleted = 0 and productId = 814"
     )
 else:
     mycursor.execute("select * from links where inserted = 0")
@@ -369,7 +369,7 @@ def df_loops(link):
                     continue
 
 
-        title = soup.find("div", class_="product__info--title").text.strip()
+        title = soup.find("div", class_="product__info--title").text.strip().replace("Erkek", "").replace("Beyaz", "").replace("Spor", "").replace("Ayakkabı", "").replace("Unisex", "").replace("Krem", "")
         nprice = extractPrice(soup.find("span", class_="price__new").text.strip(), '.')
         oprice = soup.find("span", class_="price__old")
         if (oprice):

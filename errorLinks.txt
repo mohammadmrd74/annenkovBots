@@ -81,3 +81,8 @@ update error2709
 1
 1
 1
+1
+2
+disableProduct error
+https://www.reebok.com.tr/classic-leather-ayakkabi_84862
+1
