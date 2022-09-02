@@ -252,7 +252,7 @@ mycursor = mydb.cursor(dictionary=True)
 
 if TYPE == "update":
     mycursor.execute(
-        "select productId, link, website from products where deleted = 0 and productId = 814"
+        "select productId, link, website from products where deleted = 0"
     )
 else:
     mycursor.execute("select * from links where inserted = 0")
