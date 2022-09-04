@@ -5,6 +5,7 @@ import requests
 from bs4 import BeautifulSoup
 import json
 import os
+from urllib import parse
 import random
 import time
 import threading
@@ -70,8 +71,8 @@ AdidasWomenSize = {
 
 
 sucess = False
-# TYPE = "insert"
-TYPE = "update"
+TYPE = "insert"
+# TYPE = "update"
 
 
 f = open(path + "/errorLinks.txt", "a")
@@ -353,49 +354,59 @@ def df_loops(link):
         'Cookie': ''
         }
 
-        s = requests.Session()
-        URL =  link["link"]
-        page = s.get(URL.strip())
-        soup = BeautifulSoup(page.content, "html.parser")
+        try:
+            s = requests.Session()
+            URL =  link["link"]
+            page = s.get(URL.strip())
+            soup = BeautifulSoup(page.content, "html.parser")
 
-        images = soup.find_all("img", class_="js-fancybox-lg")
-        mappedImages = []
-        for image in images:
-            try:
-                if(image["src"]):
-                    mappedImages.append(image["src"])
-            except KeyError:
-                    continue
+            images = soup.find_all("img", class_="js-fancybox-lg")
+            mappedImages = []
+            for image in images:
+                try:
+                    if(image["src"]):
+                        mappedImages.append(image["src"])
+                except KeyError:
+                        continue
 
 
-        title = soup.find("div", class_="product__info--title").text.strip().replace("Erkek", "").replace("Beyaz", "").replace("Spor", "").replace("Ayakkabı", "").replace("Unisex", "").replace("Krem", "")
-        nprice = extractPrice(soup.find("span", class_="price__new").text.strip(), '.')
-        oprice = soup.find("span", class_="price__old")
-        if (oprice):
-            oprice = extractPrice(oprice.text.strip(), '.')
-        else:
-            oprice = nprice
-        styleNum = soup.find("div", class_="product__collapse--content").find("p").text.replace('Ürün Kodu:', '').replace(" ", "").replace("\n", "").strip()
-        mappedSizes = []
-        scripts = soup.find("select", class_="js-variants-select").find_all("option")
-        for size in scripts:
-            try:
-                if(size["value"]):
-                    mappedSizes.append(size["value"].replace(",",'.'))
-            except KeyError:
-                    continue
-        if TYPE != "update":
-            insertIntoDb(
-                link,
-                title,
-                oprice,
-                nprice,
-                styleNum,
-                mappedSizes,
-                mappedImages,
-            )
-        else:
-            updateDb(link["productId"], nprice, oprice, mappedSizes)
+            title = soup.find("div", class_="product__info--title").text.strip().replace("Erkek", "").replace("Beyaz", "").replace("Spor", "").replace("Ayakkabı", "").replace("Unisex", "").replace("Krem", "")
+            nprice = extractPrice(soup.find("span", class_="price__new").text.strip(), '.')
+            oprice = soup.find("span", class_="price__old")
+            if (oprice):
+                oprice = extractPrice(oprice.text.strip(), '.')
+            else:
+                oprice = nprice
+            styleNum = soup.find("div", class_="product__collapse--content").find("p").text.replace('Ürün Kodu:', '').replace(" ", "").replace("\n", "").strip()
+            mappedSizes = []
+            scripts = soup.find("select", class_="js-variants-select").find_all("option")
+            for size in scripts:
+                try:
+                    if(size["value"]):
+                        mappedSizes.append(size["value"].replace(",",'.'))
+                except KeyError:
+                        continue
+            if TYPE != "update":
+                insertIntoDb(
+                    link,
+                    title,
+                    oprice,
+                    nprice,
+                    styleNum,
+                    mappedSizes,
+                    mappedImages,
+                )
+            else:
+                updateDb(link["productId"], nprice, oprice, mappedSizes)
+        except Exception as e:
+            sucess = False
+            if TYPE == "update":
+                disableProduct(link["productId"])
+                f.write(str(link["link"]) + "\n")
+            print(link["link"])
+            print(e)
+            print("**")
+
     
     elif link["website"] == "new balance":
         s = requests.Session()
@@ -1024,6 +1035,70 @@ def df_loops(link):
             print(link)
             print(e)
             print("**")
+    elif link["website"] == "pull and bear":
+        try:
+            print("\n\n******** PULL & BEAR *********\n\n")
+            headers = {
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36",
+            }
+
+
+            s = requests.Session()
+            URL = link["link"]
+            urlQuery = dict(parse.parse_qs(parse.urlsplit(URL).query))
+
+            # print("https://www.pullandbear.com/itxrest/2/catalog/store/25009521/20309432/category/0/product/" + pelement[0].replace("pelement=", "") + "/detail?languageId=-43&appId=1")
+
+            page = s.get(
+                "https://www.pullandbear.com/itxrest/2/catalog/store/25009521/20309432/category/0/product/"
+                + urlQuery["pelement"][0]
+                + "/detail?languageId=-43&appId=1",
+                headers=headers,
+            )
+            page = page.json()
+            title = page["nameEn"]
+
+            colors = page["bundleProductSummaries"][0]["detail"]["colors"]
+            media = page["bundleProductSummaries"][0]["detail"]["xmedia"]
+            color = next(
+                item for item in colors if item["id"] ==  urlQuery["cS"][0]
+            )
+            media = next(
+                item for item in media if item["colorCode"] ==  urlQuery["cS"][0]
+            )
+            price = color["sizes"][0]["price"]
+            oldPrice = color["sizes"][0]["oldPrice"]
+            if oldPrice == None:
+                oldPrice = price
+            sizes = list(
+                filter(
+                    lambda x: x != "",
+                    map(
+                        lambda size: size["name"] if size["visibilityValue"] == "SHOW" else "",
+                        color["sizes"],
+                    ),
+                )
+            )
+            images = list(
+                    map(
+                        lambda image: "https://static.pullandbear.net/2/photos" + media["path"] + "/" + image["idMedia"] + "1.jpg",
+                        media["xmediaItems"][0]["medias"],
+                    ),
+                
+            )
+
+            nprice = extractPrice(price[0:-2]+ ',' + price[-2:])
+            oprice = extractPrice(oldPrice[0:-2]+ ',' + oldPrice[-2:])
+           
+            if TYPE != "update":
+                insertIntoDb(link, title, oprice, nprice, urlQuery["pelement"][0], sizes, images)
+            else:
+                updateDb(link["productId"], oprice, nprice, sizes)
+        except Exception as e:
+            if TYPE == "update":
+                disableProduct(link["productId"])
+                f.write(str(link["link"]) + "\n")
+            print("pull and error")
 
     # time.sleep(3)
 
