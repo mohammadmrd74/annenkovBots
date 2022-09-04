@@ -87,8 +87,6 @@ def disableProduct(id):
     try:
         mycursor.execute("UPDATE products SET active=0 where productId = %s", [id])
         mydb.commit()
-        mycursor.execute("UPDATE links SET active=0 where productId = %s", [id])
-        mydb.commit()
     except Exception as e:
         print(e)
         f.write("disableProduct error\n")
@@ -168,13 +166,14 @@ def updateDb(productId, price, totalPrice, sizes):
         )
         availableSizes = mycursor.fetchall()
         availableSizes = availableSizes[0]["count"]
+        print("availableSizes", availableSizes)
         if availableSizes == 0:
             mycursor.execute(
                 "UPDATE products SET price=%s, totalPrice = %s,  active=0 where productId = %s",
                 [price, totalPrice, productId],
             )
         else:
-            print(availableSizes)
+            print(54354, availableSizes)
             mycursor.execute(
                 "UPDATE products SET price=%s, totalPrice = %s,  active=1 where productId = %s",
                 [price, totalPrice, productId],
@@ -252,7 +251,7 @@ mycursor = mydb.cursor(dictionary=True)
 
 if TYPE == "update":
     mycursor.execute(
-        "select productId, link, website from products where deleted = 0"
+        "select productId, link, website, currencyId from products where deleted = 0 and brandId = 5"
     )
 else:
     mycursor.execute("select * from links where inserted = 0")
@@ -468,7 +467,6 @@ def df_loops(link):
     elif link["website"] == "reebok":
         headers = {
             "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36",
-            "Cookie": "",
         }
 
         try:
