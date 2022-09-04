@@ -251,7 +251,7 @@ mycursor = mydb.cursor(dictionary=True)
 
 if TYPE == "update":
     mycursor.execute(
-        "select productId, link, website, currencyId from products where deleted = 0 and brandId = 5"
+        "select productId, link, website, currencyId from products where deleted = 0"
     )
 else:
     mycursor.execute("select * from links where inserted = 0")
@@ -521,7 +521,7 @@ def df_loops(link):
             print(link["link"])
             print(e)
             print("**")
-
+    
     elif link["website"] == "adidas" and link["currencyId"] == 1:
         adiheaders = {
             "origin": "www.adidas.com.tr",
@@ -1025,23 +1025,27 @@ def df_loops(link):
             print(e)
             print("**")
 
-    time.sleep(3)
+    # time.sleep(3)
 
 
 df = []
 counter = 0
 if TYPE == "update":
     random.shuffle(products)
-    links = [products[i : i + 5] for i in range(0, len(products), 5)]
+    
+    # links = [products[i : i + 5] for i in range(0, len(products), 5)]
 
-    for chLink in links:
-        with ThreadPool(5) as pool:
-            for result in pool.map(df_loops, chLink):
-                df.append(result)
-        time.sleep(2)
-        counter += 1
-        print(counter)
-        f.write(str(counter) + "\n")
+    # for chLink in links:
+    #     with ThreadPool(5) as pool:
+    #         for result in pool.map(df_loops, chLink):
+    #             df.append(result)
+    #     # time.sleep(2)
+    #     counter += 1
+    #     print(counter)
+    #     f.write(str(counter) + "\n")
+    for chLink in products:
+        time.sleep(1)
+        df_loops(chLink)
 
 
 else:

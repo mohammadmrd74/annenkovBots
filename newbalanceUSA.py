@@ -1,3 +1,4 @@
+
 import requests
 import mysql.connector
 from bs4 import BeautifulSoup
@@ -58,27 +59,12 @@ def updateDb(productId, price, totalPrice, sizes):
 def insertIntoDb(link, title, price, totalPrice, styleNum, availableSizesInNumber, mappedImages):
     sem.acquire()
     try:
-        mycursor.execute("SELECT id from brands where brandName = 'timberland'")
+        mycursor.execute("SELECT id from brands where brandName = 'asics'")
         brandId = mycursor.fetchall()
         sql = "INSERT INTO products (title, price, totalPrice, styleNumber, currencyId, brandId, mainAndCategoryId, typeId, linkId, link, colorId, sColorId) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
         val = (title, price, totalPrice, styleNum, 1, brandId[0]['id'], 4, 1, 1, link,3, 2)
         mycursor.execute(sql, val)
-        mydb.commit()
 
-        # mycursor.execute("SELECT LAST_INSERT_ID() as insertedId")
-        # insertedId = mycursor.fetchall()
-        # insertedId = insertedId[0]['insertedId']
-        # for size in availableSizesInNumber:
-        #     mycursor.execute("SELECT sizeId from size where size = %s", [size])
-        #     sizeId = mycursor.fetchall()
-        #     mycursor.execute("INSERT INTO linkSizeAndProduct(sizeId, productId) VALUES (%s, %s)", [sizeId[0]['sizeId'], insertedId])
-        #     mydb.commit()
-        
-        # for image in mappedImages:
-        #     mycursor.execute("INSERT INTO images(imageUrl, productId) VALUES (%s, %s)", [image, insertedId])
-        #     mydb.commit()
-
-        # mycursor.execute("UPDATE links SET inserted=%s where id = %s", [1, 1])
         mydb.commit()
         sem.release()
     except Exception as e: 
@@ -104,50 +90,39 @@ def extractPrice(price, sep='.'):
 
 
 
-print("\n\n******** timberland *********\n\n")
-headers = {
-'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
-'Cookie': ''
-}
-
+print("\n\n******** NEWBALANCE *********\n\n")
 
 s = requests.Session()
-URL =  "https://www.timberland.com.tr/supaway-fabric-beyaz-kadin-spor-ayakkabi-p_126970"
+# URL = "https://www.newbalance.com.tr/urun/new-balance-997-410916.html"
+URL = "https://www.newbalance.com/pd/fresh-foam-x-860v12/M860V12-MPS.html"
 page = s.get(URL.strip())
 soup = BeautifulSoup(page.content, "html.parser")
+title = soup.find("h1", class_="product-name").text.strip()
+price = extractPrice(soup.find("span", class_="sales font-body-large").text.strip(), ",")
+morePrice= price
+if(soup.find("span", class_="strike-through")):
+    morePrice = extractPrice(soup.find("span", class_="strike-through").text.strip(), ",")
+print(price)
 
-images = soup.find("div", class_="main-gallery").find_all("img", class_="image-blur")
+styleNum = soup.find("span", class_="product-id-value").text.strip()
+print(styleNum)
+images = soup.find_all("div", class_="carousel-item")
 mappedImages = []
 for image in images:
     try:
-        if(image["src"]):
-            mappedImages.append(image["data-image"])
-    except KeyError:
-            continue
+        if(len(image.find("source")["data-srcset"].split(",")) == 1):
+            mappedImages.append(image.find("source")["data-srcset"])
 
-
-title = soup.find("h1", class_="p-name").text.strip()
-# styleNum = soup.find("span", class_="sk-model-alt-title").text.strip()
-
-npirce = ''
-oprice = ''
-if(soup.find("span", class_="one-price")): 
-  oprice = extractPrice(soup.find("span", class_="one-price").text.strip())
-  nprice = oprice
-if(soup.find("span", class_="new-price")):
-  nprice = extractPrice(soup.find("span", class_="new-price").text.strip())
-  oprice = extractPrice(soup.find("span", class_="old-price").text.strip())
-
-print(nprice)
-print(oprice)
-
-mappedSizes = []
-sizes = soup.find("div", class_="size-options").find_all("a", class_="")
-for size in sizes:
-    try:
-        mappedSizes.append(size.text.strip())
     except KeyError:
         continue
-title = title.replace("Ayakkabı", "").replace("Spor", "").replace("Erkek", "").replace("Nubuk", "").replace("Yeşil", "").replace("Koyu", "").replace("Kadin", "")
-# insertIntoDb("https://www.timberland.com.tr/union-wharf-20-ek-erkek-tekne-ayakkabisi-p_127348", title, oprice, nprice, "", mappedSizes, mappedImages)
+grid = soup.find("div", class_="select-attribute-grid")
+sizes = grid.find_all("button")
 
+mappedSizes = []
+for size in sizes:
+    try:
+        mappedSizes.append(size.find("span", class_="size-value").text.strip())
+
+    except KeyError:
+        continue
+print(mappedSizes)
