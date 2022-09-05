@@ -1109,21 +1109,21 @@ if TYPE == "update":
     random.shuffle(products)
     print(len(products))
     
-    # links = [products[i : i + 5] for i in range(0, len(products), 5)]
+    links = [products[i : i + 1] for i in range(0, len(products), 2)]
 
-    # for chLink in links:
-    #     with ThreadPool(5) as pool:
-    #         for result in pool.map(df_loops, chLink):
-    #             df.append(result)
-    #     # time.sleep(2)
-    #     counter += 1
-    #     print(counter)
-    #     f.write(str(counter) + "\n")
-    for chLink in products:
-        # time.sleep(1)
+    for chLink in links:
+        with ThreadPool(2) as pool:
+            for result in pool.map(df_loops, chLink):
+                df.append(result)
+        # time.sleep(2)
         counter += 1
         print(counter)
-        df_loops(chLink)
+        f.write(str(counter) + "\n")
+    # for chLink in products:
+    #     # time.sleep(1)
+    #     counter += 1
+    #     print(counter)
+    #     df_loops(chLink)
 
 
 else:
