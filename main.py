@@ -1107,6 +1107,7 @@ df = []
 counter = 0
 if TYPE == "update":
     random.shuffle(products)
+    print(len(products))
     
     # links = [products[i : i + 5] for i in range(0, len(products), 5)]
 
@@ -1119,7 +1120,9 @@ if TYPE == "update":
     #     print(counter)
     #     f.write(str(counter) + "\n")
     for chLink in products:
-        time.sleep(1)
+        # time.sleep(1)
+        counter += 1
+        print(counter)
         df_loops(chLink)
 
 
