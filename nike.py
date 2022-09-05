@@ -161,7 +161,7 @@ headers = {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
 }
 
-URL = "https://www.nike.com/tr/t/air-jordan-36-low-basketbol-ayakkab%C4%B1s%C4%B1-nJBBHH/DH0833-063"
+URL = "https://www.nike.com/tr/t/jordan-air-200e-ayakkab%C4%B1s%C4%B1-kSbN3x/DH7381-261"
 page = s.get(URL, headers=headers)
 soup = BeautifulSoup(page.content, "html.parser")
 print(soup)
@@ -176,6 +176,8 @@ fstyleNum = (
     .replace("Stil: ", "")
 )
 
+print(URL.split('/')[-1], fstyleNum)
+
 # pyperclip.copy(details)
 jsonDetails = json.loads(mains)["props"]["pageProps"]["initialState"]
 styleNum = fstyleNum
@@ -186,7 +188,7 @@ if fstyleNum not in jsonDetails["Threads"]["products"]:
         styleNum = urlst
     else:
         styleNum = list(jsonDetails["Threads"]["products"].keys())[0]
-print("123123123")
+
 
 images = jsonDetails["Threads"]["products"][styleNum]["nodes"][0]["nodes"]
 

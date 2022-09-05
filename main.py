@@ -252,7 +252,7 @@ mycursor = mydb.cursor(dictionary=True)
 
 if TYPE == "update":
     mycursor.execute(
-        "select productId, link, website, currencyId from products where deleted = 0"
+        "select productId, link, website, currencyId from products where deleted = 0 and productId = 2130"
     )
 else:
     mycursor.execute("select * from links where inserted = 0")
@@ -281,6 +281,9 @@ def df_loops(link):
                 .text.strip()
                 .replace("Stil: ", "")
             )
+
+            if(URL.split('/')[-1] != fstyleNum):
+                raise Exception("gone")
 
             jsonDetails = json.loads(mains)["props"]["pageProps"]["initialState"]
             styleNum = fstyleNum
@@ -338,13 +341,14 @@ def df_loops(link):
                 )
 
         except Exception as e:
+            print("****nike*****")
             sucess = False
             if TYPE == "update":
                 disableProduct(link["productId"])
                 f.write(str(link["link"]) + "\n")
             print(link["link"])
             print(e)
-            print("**")
+            print("****nike end*****")
 
     
     elif link["website"] == "fashfed":
@@ -1109,10 +1113,10 @@ if TYPE == "update":
     random.shuffle(products)
     print(len(products))
     
-    links = [products[i : i + 1] for i in range(0, len(products), 2)]
+    links = [products[i : i + 3] for i in range(0, len(products), 4)]
 
     for chLink in links:
-        with ThreadPool(2) as pool:
+        with ThreadPool(4) as pool:
             for result in pool.map(df_loops, chLink):
                 df.append(result)
         # time.sleep(2)
