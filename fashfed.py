@@ -96,7 +96,7 @@ headers = {
 }
 
 s = requests.Session()
-URL = "https://www.fashfed.com/urun/nike-air-force-1-07-erkek-beyaz-spor-ayakkabi-cw2288-7/?integration_renk=111&integration_beden=42%2C5"
+URL = "https://www.fashfed.com/urun/nike-flex-2021-run-kadin-siyah-spor-ayakkabi-cw3409-1/?integration_renk=002&integration_beden="
 page = s.get(URL.strip())
 soup = BeautifulSoup(page.content, "html.parser")
 
@@ -112,9 +112,10 @@ for image in images:
 
 title = soup.find("div", class_="product__info--title").text.strip()
 nprice = extractPrice(soup.find("span", class_="price__new").text.strip(), '.')
-oprice = soup.find("span", class_="price__old")
-if (oprice):
-    oprice = extractPrice(oprice.text.strip(), '.')
+redprice = soup.find("div", class_="red-price")
+if (redprice):
+    oprice = nprice
+    nprice = extractPrice(redprice.text.strip(), '.')
 else:
     oprice = nprice
 styleNum = soup.find("div", class_="product__collapse--content").find("p").text.replace('Ürün Kodu:', '').replace(" ", "").replace("\n", "").strip()

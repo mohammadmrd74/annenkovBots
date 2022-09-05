@@ -71,8 +71,8 @@ AdidasWomenSize = {
 
 
 sucess = False
-TYPE = "insert"
-# TYPE = "update"
+# TYPE = "insert"
+TYPE = "update"
 
 
 f = open(path + "/errorLinks.txt", "a")
@@ -372,11 +372,11 @@ def df_loops(link):
 
             title = soup.find("div", class_="product__info--title").text.strip().replace("Erkek", "").replace("Beyaz", "").replace("Spor", "").replace("Ayakkabı", "").replace("Unisex", "").replace("Krem", "")
             nprice = extractPrice(soup.find("span", class_="price__new").text.strip(), '.')
-            oprice = soup.find("span", class_="price__old")
-            if (oprice):
-                oprice = extractPrice(oprice.text.strip(), '.')
-            else:
+            oprice = nprice
+            redprice = soup.find("div", class_="red-price")
+            if (redprice):
                 oprice = nprice
+                nprice = extractPrice(redprice.text.strip(), '.')
             styleNum = soup.find("div", class_="product__collapse--content").find("p").text.replace('Ürün Kodu:', '').replace(" ", "").replace("\n", "").strip()
             mappedSizes = []
             scripts = soup.find("select", class_="js-variants-select").find_all("option")
