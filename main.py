@@ -114,9 +114,12 @@ def extractPrice(price, sep="."):
 
     return extPrice
 
-
+readyToUpdates = []
 def updateDb(productId, price, totalPrice, sizes):
-    print(sizes)
+    readyToUpdates.append([productId, price, totalPrice, sizes])
+    
+
+def updateDbMain(productId, price, totalPrice, sizes):
     sem.acquire()
     try:
         mycursor.execute(
@@ -257,6 +260,8 @@ if TYPE == "update":
 else:
     mycursor.execute("select * from links where inserted = 0")
 
+
+
 products = mycursor.fetchall()
 # print(links)
 def df_loops(link):
@@ -384,9 +389,10 @@ def df_loops(link):
             styleNum = soup.find("div", class_="product__collapse--content").find("p").text.replace('Ürün Kodu:', '').replace(" ", "").replace("\n", "").strip()
             mappedSizes = []
             scripts = soup.find("select", class_="js-variants-select").find_all("option")
+
             for size in scripts:
                 try:
-                    if(size["value"]):
+                    if(size["value"] and "Gelince Haber" not in  size.text):
                         mappedSizes.append(size["value"].replace(",",'.'))
                 except KeyError:
                         continue
@@ -1110,13 +1116,15 @@ def df_loops(link):
 df = []
 counter = 0
 if TYPE == "update":
+    start_time = time.time()
     random.shuffle(products)
     print(len(products))
     
-    links = [products[i : i + 3] for i in range(0, len(products), 4)]
+    links = [products[i : i + 6] for i in range(0, len(products), 6)]
 
     for chLink in links:
-        with ThreadPool(4) as pool:
+        print(8888, len(chLink))
+        with ThreadPool(6) as pool:
             for result in pool.map(df_loops, chLink):
                 df.append(result)
         # time.sleep(2)
@@ -1128,6 +1136,12 @@ if TYPE == "update":
     #     counter += 1
     #     print(counter)
     #     df_loops(chLink)
+
+    print(readyToUpdates)
+    for ru in readyToUpdates:
+        updateDbMain(ru[0], ru[1], ru[2], ru[3])
+    
+    print("--- %s seconds ---" % (time.time() - start_time))
 
 
 else:
