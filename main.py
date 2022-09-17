@@ -71,8 +71,8 @@ AdidasWomenSize = {
 
 
 sucess = False
-# TYPE = "insert"
-TYPE = "update"
+TYPE = "insert"
+# TYPE = "update"
 
 
 f = open(path + "/errorLinks.txt", "a")
@@ -116,10 +116,6 @@ def extractPrice(price, sep="."):
 
 readyToUpdates = []
 def updateDb(productId, price, totalPrice, sizes):
-    readyToUpdates.append([productId, price, totalPrice, sizes])
-    
-
-def updateDbMain(productId, price, totalPrice, sizes):
     sem.acquire()
     try:
         mycursor.execute(
@@ -1112,48 +1108,38 @@ def df_loops(link):
 
     # time.sleep(3)
 
+if __name__ == "__main__":
+    df = []
+    counter = 0
+    if TYPE == "update":
+        start_time = time.time()
+        random.shuffle(products)
+        print(len(products))
+        
+        links = [products[i : i + 6] for i in range(0, len(products), 6)]
 
-df = []
-counter = 0
-if TYPE == "update":
-    start_time = time.time()
-    random.shuffle(products)
-    print(len(products))
-    
-    links = [products[i : i + 6] for i in range(0, len(products), 6)]
-
-    for chLink in links:
-        print(8888, len(chLink))
-        with ThreadPool(6) as pool:
-            for result in pool.map(df_loops, chLink):
-                df.append(result)
-        # time.sleep(2)
-        counter += 1
-        print(counter)
-        f.write(str(counter) + "\n")
-    # for chLink in products:
-    #     # time.sleep(1)
-    #     counter += 1
-    #     print(counter)
-    #     df_loops(chLink)
-
-    print(readyToUpdates)
-    for ru in readyToUpdates:
-        updateDbMain(ru[0], ru[1], ru[2], ru[3])
-    
-    print("--- %s seconds ---" % (time.time() - start_time))
+        for chLink in links:
+            with ThreadPool(6) as pool:
+                for result in pool.map(df_loops, chLink):
+                    df.append(result)
+            # time.sleep(2)
+            counter += 1
+            print(counter)
+            f.write(str(counter) + "\n")
+        
+        print("--- %s seconds ---" % (time.time() - start_time))
 
 
-else:
-    links = [products[i : i + 10] for i in range(0, len(products), 10)]
+    else:
+        links = [products[i : i + 10] for i in range(0, len(products), 10)]
 
-    for chLink in links:
-        with ThreadPool(10) as pool:
-            for result in pool.map(df_loops, chLink):
-                df.append(result)
-        time.sleep(2)
-        counter += 1
-        f.write(str(counter) + "\n")
+        for chLink in links:
+            with ThreadPool(10) as pool:
+                for result in pool.map(df_loops, chLink):
+                    df.append(result)
+            time.sleep(2)
+            counter += 1
+            f.write(str(counter) + "\n")
 
 
-f.close()
+    f.close()

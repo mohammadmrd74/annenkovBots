@@ -97,9 +97,10 @@ s = requests.Session()
 URL = "https://www.newbalance.com.tr/urun/new-balance-996-411083.html"
 page = s.get(URL.strip())
 soup = BeautifulSoup(page.content, "html.parser")
-product = soup.find_all("h1", class_="emos_H1")
+product = soup.find_all("h1", class_="product-name")
 title = product[0].text.strip()
-price = extractPrice(soup.find(id="ctl00_u23_ascUrunDetay_dtUrunDetay_ctl00_lblSatisFiyat").text.strip())
+print(title)
+price = extractPrice(soup.find("span", class_="price-value").text.strip())
 morePrice= price
 if(soup.find(id="plhSatisIlkFiyat").text):
     morePrice = extractPrice(soup.find(id="plhSatisIlkFiyat").text.strip())
