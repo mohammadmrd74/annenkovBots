@@ -71,8 +71,8 @@ AdidasWomenSize = {
 
 
 sucess = False
-TYPE = "insert"
-# TYPE = "update"
+# TYPE = "insert"
+TYPE = "update"
 
 
 f = open(path + "/errorLinks.txt", "a")
