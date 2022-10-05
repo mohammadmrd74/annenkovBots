@@ -71,8 +71,8 @@ AdidasWomenSize = {
 
 
 sucess = False
-TYPE = "insert"
-# TYPE = "update"
+# TYPE = "insert"
+TYPE = "update"
 
 
 f = open(path + "/errorLinks.txt", "a")
@@ -251,7 +251,7 @@ mycursor = mydb.cursor(dictionary=True)
 
 if TYPE == "update":
     mycursor.execute(
-        "select productId, link, website, currencyId from products where deleted = 0"
+        "select productId, link, website, currencyId from products where deleted = 0 and website = 'new balance'"
     )
 else:
     mycursor.execute("select * from links where inserted = 0")
@@ -420,46 +420,35 @@ def df_loops(link):
         try:
             page = s.get(URL.strip(), timeout=10)
             soup = BeautifulSoup(page.content, "html.parser")
-            product = soup.find_all("h1", class_="emos_H1")
-            title = product[0].text.strip()
-            price = extractPrice(
-                soup.find(
-                    id="ctl00_u23_ascUrunDetay_dtUrunDetay_ctl00_lblSatisFiyat"
-                ).text.strip()
-            )
-            morePrice = price
-            if soup.find(id="plhSatisIlkFiyat").text:
-                morePrice = extractPrice(soup.find(id="plhSatisIlkFiyat").text.strip())
-            cloudId = URL.strip().split("/")[-1]
-            cloudId = cloudId.split("-")[-1].replace(".html", "")
+            title = soup.find("h1", class_="product-name").text.strip()
+            price = extractPrice(soup.find("span", class_="sales font-body-large").text.strip(), ",")
+            morePrice= price
+            if(soup.find("span", class_="strike-through")):
+                morePrice = extractPrice(soup.find("span", class_="strike-through").text.strip(), ",")
+            print(price)
 
-            styleNum = soup.find("div", class_="ems-prd-sort-desc").text.strip()
-            tags = soup.find_all("ul", class_="swiper-wrapper slide-wrp")[0]
-            images = tags.find_all("a")
+            styleNum = soup.find("div", class_="product-category").text.strip()
+           
+            images = soup.find_all("li", class_="swiper-slide")
             mappedImages = []
             for image in images:
                 try:
-                    if image["data-large"]:
-                        mappedImages.append(image["data-large"])
+                    mappedImages.append(image["data-large"])
+
                 except KeyError:
                     continue
-
-            sizes = page = s.get(
-                "https://www.newbalance.com.tr/usercontrols/urunDetay/ajxUrunSecenek.aspx?urn="
-                + cloudId
-                + "&fn=dty&std=True&type=scd1&index=0&objectId=ctl00_u23_ascUrunDetay_dtUrunDetay_ctl00&runatId=urunDetay&scd1=0&lang=tr-TR"
-            )
-            soup = BeautifulSoup(page.content, "html.parser")
-            realSizes = []
-            sizes = soup.find_all("a")
+            grid = soup.find("div", class_="options-list")
+            sizes = grid.find_all("li", class_="barcode-item")
+            print(mappedImages)
+            mappedSizes = []
             for size in sizes:
                 try:
-                    if size["class"] and size["class"].count("stokYok") != 0:
-                        continue
-                    else:
-                        realSizes.append(size.text.strip())
+                    if("out-of-stock" not in size["class"]):
+                        mappedSizes.append(size.text.strip())
+
                 except KeyError:
-                    realSizes.append(size.text.strip())
+                    continue
+            print(mappedSizes)
             if TYPE != "update":
                 insertIntoDb(
                     link,
@@ -467,11 +456,11 @@ def df_loops(link):
                     morePrice,
                     price,
                     styleNum.split(" ")[-1],
-                    realSizes,
+                    mappedSizes,
                     mappedImages,
                 )
             else:
-                updateDb(link["productId"], morePrice, price, realSizes)
+                updateDb(link["productId"], morePrice, price, mappedSizes)
         except Exception as e:
             sucess = False
             if TYPE == "update":
