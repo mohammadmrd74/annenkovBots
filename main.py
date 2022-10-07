@@ -138,7 +138,7 @@ def updateDb(productId, price, totalPrice, sizes):
                 )
                 isSizeThere = mycursor.fetchall()
                 print(22, isSizeThere)
-                if len(isSizeThere[0]) > 0:
+                if len(isSizeThere) > 0:
                     mycursor.execute(
                         "UPDATE linkSizeAndProduct SET available = 1  where sizeId = %s AND productId = %s",
                         [sizeId[0]["sizeId"], productId],
@@ -251,7 +251,7 @@ mycursor = mydb.cursor(dictionary=True)
 
 if TYPE == "update":
     mycursor.execute(
-        "select productId, link, website, currencyId from products where deleted = 0 and website = 'new balance'"
+        "select productId, link, website, currencyId from products where deleted = 0"
     )
 else:
     mycursor.execute("select * from links where inserted = 0")
@@ -421,11 +421,11 @@ def df_loops(link):
             page = s.get(URL.strip(), timeout=10)
             soup = BeautifulSoup(page.content, "html.parser")
             title = soup.find("h1", class_="product-name").text.strip()
-            price = extractPrice(soup.find("span", class_="sales font-body-large").text.strip(), ",")
+            price = extractPrice(soup.find("span", class_="sales font-body-large").text.strip(), ".")
             morePrice= price
             if(soup.find("span", class_="strike-through")):
-                morePrice = extractPrice(soup.find("span", class_="strike-through").text.strip(), ",")
-            print(price)
+                morePrice = extractPrice(soup.find("span", class_="strike-through").text.strip(), ".")
+    
 
             styleNum = soup.find("div", class_="product-category").text.strip()
            
@@ -439,7 +439,6 @@ def df_loops(link):
                     continue
             grid = soup.find("div", class_="options-list")
             sizes = grid.find_all("li", class_="barcode-item")
-            print(mappedImages)
             mappedSizes = []
             for size in sizes:
                 try:
@@ -448,7 +447,7 @@ def df_loops(link):
 
                 except KeyError:
                     continue
-            print(mappedSizes)
+            print(link["productId"], morePrice, price, mappedSizes)
             if TYPE != "update":
                 insertIntoDb(
                     link,

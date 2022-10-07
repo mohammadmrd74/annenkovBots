@@ -94,15 +94,16 @@ print("\n\n******** NEWBALANCE *********\n\n")
 
 s = requests.Session()
 # URL = "https://www.newbalance.com.tr/urun/new-balance-997-410916.html"
-URL = "https://www.newbalance.com.tr/urun/new-balance-109-5178"
+URL = "https://www.newbalance.com.tr/urun/new-balance-520-3749"
 page = s.get(URL.strip())
 soup = BeautifulSoup(page.content, "html.parser")
 title = soup.find("h1", class_="product-name").text.strip()
-price = extractPrice(soup.find("span", class_="sales font-body-large").text.strip(), ",")
+price = extractPrice(soup.find("span", class_="price-value").text.strip(), ".")
 morePrice= price
 if(soup.find("span", class_="strike-through")):
     morePrice = extractPrice(soup.find("span", class_="strike-through").text.strip(), ",")
-print(price)
+print(222, soup.find("span", class_="price-value").text.strip())
+print(222,price)
 
 styleNum = soup.find("div", class_="product-category").text.strip()
 print(styleNum.split(" ")[-1])
