@@ -94,34 +94,35 @@ print("\n\n******** NEWBALANCE *********\n\n")
 
 s = requests.Session()
 # URL = "https://www.newbalance.com.tr/urun/new-balance-997-410916.html"
-URL = "https://www.newbalance.com/pd/fresh-foam-x-860v12/M860V12-MPS.html"
+URL = "https://www.newbalance.com.tr/urun/new-balance-520-3749"
 page = s.get(URL.strip())
 soup = BeautifulSoup(page.content, "html.parser")
 title = soup.find("h1", class_="product-name").text.strip()
-price = extractPrice(soup.find("span", class_="sales font-body-large").text.strip(), ",")
+price = extractPrice(soup.find("span", class_="price-value").text.strip(), ".")
 morePrice= price
 if(soup.find("span", class_="strike-through")):
     morePrice = extractPrice(soup.find("span", class_="strike-through").text.strip(), ",")
-print(price)
+print(222, soup.find("span", class_="price-value").text.strip())
+print(222,price)
 
-styleNum = soup.find("span", class_="product-id-value").text.strip()
-print(styleNum)
-images = soup.find_all("div", class_="carousel-item")
+styleNum = soup.find("div", class_="product-category").text.strip()
+print(styleNum.split(" ")[-1])
+images = soup.find_all("li", class_="swiper-slide")
 mappedImages = []
 for image in images:
     try:
-        if(len(image.find("source")["data-srcset"].split(",")) == 1):
-            mappedImages.append(image.find("source")["data-srcset"])
+        mappedImages.append(image["data-large"])
 
     except KeyError:
         continue
-grid = soup.find("div", class_="select-attribute-grid")
-sizes = grid.find_all("button")
-
+grid = soup.find("div", class_="options-list")
+sizes = grid.find_all("li", class_="barcode-item")
+print(mappedImages)
 mappedSizes = []
 for size in sizes:
     try:
-        mappedSizes.append(size.find("span", class_="size-value").text.strip())
+        if("out-of-stock" not in size["class"]):
+         mappedSizes.append(size.text.strip())
 
     except KeyError:
         continue
