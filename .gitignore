@@ -1,4 +1,5 @@
 errorLinks.txt
 venv/
-ttt.text
+.vscode/
+__pycache__/
 
