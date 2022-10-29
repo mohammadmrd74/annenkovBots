@@ -3,4 +3,5 @@ errorLinks.txt.txt
 venv/
 .vscode/
 __pycache__/
+updateService/__pycache__/
 
