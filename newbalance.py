@@ -94,7 +94,7 @@ print("\n\n******** NEWBALANCE *********\n\n")
 
 s = requests.Session()
 # URL = "https://www.newbalance.com.tr/urun/new-balance-997-410916.html"
-URL = "https://www.newbalance.com.tr/urun/new-balance-680-1399"
+URL = "https://www.newbalance.com.tr/urun/new-balance-1080-3673"
 page = s.get(URL.strip())
 soup = BeautifulSoup(page.content, "html.parser")
 print(soup)

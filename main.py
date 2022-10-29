@@ -254,14 +254,13 @@ if TYPE == "update":
         "select productId, link, website, currencyId from products where deleted = 0"
     )
 else:
-    mycursor.execute("select * from links where inserted = 0")
+    mycursor.execute("select * from links where inserted = 0 and typeId < 13 and brand = 'new balance'")
 
 
 
 products = mycursor.fetchall()
 # print(links)
 def df_loops(link):
-    print(link)
     if link["website"] == "nike" or link["website"] == "jordan":
         headers = {
             "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36",
@@ -447,7 +446,6 @@ def df_loops(link):
 
                 except KeyError:
                     continue
-            print(link["productId"], morePrice, price, mappedSizes)
             if TYPE != "update":
                 insertIntoDb(
                     link,
