@@ -13,6 +13,17 @@ import threading
 sem = threading.Semaphore()
 path = os.path.abspath(os.getcwd())
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
 AdidasMenSize = {
     "4": "36",
     "4.5": "36 2/3",
@@ -126,8 +137,6 @@ def updateDb(productId, price, totalPrice, sizes):
         beforeSizes = list(map(lambda x: x["size"], beforeSizes))
         sizesToInsert = Diff(sizes, beforeSizes)
         sizezToUpdate = Diff(beforeSizes, sizes)
-        print("sizesToInsert", sizesToInsert)
-        print("sizezToUpdate", sizezToUpdate)
         if len(sizesToInsert):
             for size in sizesToInsert:
                 mycursor.execute("SELECT sizeId from size where size = %s", [size])
@@ -137,7 +146,6 @@ def updateDb(productId, price, totalPrice, sizes):
                     [productId, sizeId[0]["sizeId"]],
                 )
                 isSizeThere = mycursor.fetchall()
-                print(22, isSizeThere)
                 if len(isSizeThere) > 0:
                     mycursor.execute(
                         "UPDATE linkSizeAndProduct SET available = 1  where sizeId = %s AND productId = %s",
@@ -166,14 +174,12 @@ def updateDb(productId, price, totalPrice, sizes):
         )
         availableSizes = mycursor.fetchall()
         availableSizes = availableSizes[0]["count"]
-        print("availableSizes", availableSizes)
         if availableSizes == 0:
             mycursor.execute(
                 "UPDATE products SET price=%s, totalPrice = %s,  active=0 where productId = %s",
                 [price, totalPrice, productId],
             )
         else:
-            print(54354, availableSizes)
             mycursor.execute(
                 "UPDATE products SET price=%s, totalPrice = %s,  active=1 where productId = %s",
                 [price, totalPrice, productId],
@@ -254,7 +260,7 @@ if TYPE == "update":
         "select productId, link, website, currencyId from products where deleted = 0"
     )
 else:
-    mycursor.execute("select * from links where inserted = 0 and typeId < 13 and brand = 'new balance'")
+    mycursor.execute("select * from links where inserted = 0")
 
 
 
@@ -417,17 +423,16 @@ def df_loops(link):
         s = requests.Session()
         URL = link["link"]
         try:
-            page = s.get(URL.strip(), timeout=10)
+            page = s.get(URL.strip())
             soup = BeautifulSoup(page.content, "html.parser")
             title = soup.find("h1", class_="product-name").text.strip()
-            price = extractPrice(soup.find("span", class_="sales font-body-large").text.strip(), ".")
+            price = extractPrice(soup.find("span", class_="price-value").text.strip(), ".")
             morePrice= price
             if(soup.find("span", class_="strike-through")):
-                morePrice = extractPrice(soup.find("span", class_="strike-through").text.strip(), ".")
-    
+                morePrice = extractPrice(soup.find("span", class_="strike-through").text.strip(), ",")
 
             styleNum = soup.find("div", class_="product-category").text.strip()
-           
+         
             images = soup.find_all("li", class_="swiper-slide")
             mappedImages = []
             for image in images:
@@ -438,6 +443,7 @@ def df_loops(link):
                     continue
             grid = soup.find("div", class_="options-list")
             sizes = grid.find_all("li", class_="barcode-item")
+
             mappedSizes = []
             for size in sizes:
                 try:
@@ -454,7 +460,7 @@ def df_loops(link):
                     price,
                     styleNum.split(" ")[-1],
                     mappedSizes,
-                    mappedImages,
+                    mappedImages
                 )
             else:
                 updateDb(link["productId"], morePrice, price, mappedSizes)
@@ -1093,7 +1099,6 @@ def df_loops(link):
             print("pull and error")
 
     # time.sleep(3)
-
 if __name__ == "__main__":
     df = []
     counter = 0
@@ -1102,24 +1107,24 @@ if __name__ == "__main__":
         random.shuffle(products)
         print(len(products))
         
-        links = [products[i : i + 6] for i in range(0, len(products), 6)]
+        links = [products[i : i + 3] for i in range(0, len(products), 3)]
 
         for chLink in links:
-            with ThreadPool(6) as pool:
+            with ThreadPool(4) as pool:
                 for result in pool.map(df_loops, chLink):
                     df.append(result)
-            # time.sleep(2)
+            time.sleep(2)
             counter += 1
-            print(counter)
+            print(bcolors.OKBLUE +  str(counter) + bcolors.ENDC)
             f.write(str(counter) + "\n")
         
-        print("--- %s seconds ---" % (time.time() - start_time))
+        print(bcolors.HEADER + "--- %s seconds ---" % (time.time() - start_time) + bcolors.ENDC)
 
 
     else:
-        links = [products[i : i + 10] for i in range(0, len(products), 10)]
-
+        links = [products[i : i + 1] for i in range(0, len(products), 1)]
         for chLink in links:
+            print(chLink)
             with ThreadPool(10) as pool:
                 for result in pool.map(df_loops, chLink):
                     df.append(result)
