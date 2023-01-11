@@ -100,7 +100,9 @@ def disableProduct(id):
         mycursor.execute("UPDATE products SET active=0 where productId = %s", [id])
         mydb.commit()
     except Exception as e:
+        print(bcolors.FAIL)
         print(e)
+        print(bcolors.ENDC)
         f.write("disableProduct error\n")
     sem.release()
     print("disableProduct rel", id)
@@ -189,7 +191,10 @@ def updateDb(productId, price, totalPrice, sizes):
 
     except Exception as e:
         f.write(str("update error" + str(productId)) + "\n")
+        
+        print(bcolors.FAIL)
         print(e)
+        print(bcolors.ENDC)
 
         sem.release()
 
@@ -243,9 +248,12 @@ def insertIntoDb(
         mydb.commit()
         sem.release()
     except Exception as e:
+        print(bcolors.FAIL)
+        
         print("error insert")
         print(link)
         print(e)
+        print(bcolors.ENDC)
         sem.release()
 
 
@@ -352,8 +360,10 @@ def df_loops(link):
             if TYPE == "update":
                 disableProduct(link["productId"])
                 f.write(str(link["link"]) + "\n")
+            print(bcolors.FAIL)
             print(link["link"])
             print(e)
+            print(bcolors.ENDC)
             print("****nike end*****")
 
     
@@ -414,9 +424,11 @@ def df_loops(link):
             if TYPE == "update":
                 disableProduct(link["productId"])
                 f.write(str(link["link"]) + "\n")
+            print(bcolors.FAIL)
             print(link["link"])
             print(e)
             print("**")
+            print(bcolors.ENDC)
 
     
     elif link["website"] == "new balance":
@@ -469,9 +481,11 @@ def df_loops(link):
             if TYPE == "update":
                 disableProduct(link["productId"])
                 f.write(str(link["link"]) + "\n")
+            print(bcolors.FAIL)
             print(link["link"])
             print(e)
             print("**")
+            print(bcolors.ENDC)
 
     elif link["website"] == "reebok":
         headers = {
@@ -527,9 +541,11 @@ def df_loops(link):
             if TYPE == "update":
                 disableProduct(link["productId"])
                 f.write(str(link["link"]) + "\n")
+            print(bcolors.FAIL)
             print(link["link"])
             print(e)
             print("**")
+            print(bcolors.ENDC)
     
     elif link["website"] == "adidas" and link["currencyId"] == 1:
         adiheaders = {
@@ -563,15 +579,12 @@ def df_loops(link):
                 )
             )
             mappedSizes = list(map(lambda x: x["size"], filtered))
-            print(details["offers"]["price"])
             price = str(details["offers"]["price"])
             morePrice = price
-            print(price)
             if soup.find("div", class_="gl-price-item--crossed"):
                 morePrice = extractPrice(
                     soup.find("div", class_="gl-price-item--crossed").text.strip(), "."
                 )
-            print(morePrice)
 
             if TYPE != "update":
                 insertIntoDb(
@@ -591,9 +604,11 @@ def df_loops(link):
             if TYPE == "update":
                 disableProduct(link["productId"])
                 f.write(str(link["link"]) + "\n")
+            print(bcolors.FAIL)
             print(link["link"])
             print(e)
             print("**")
+            print(bcolors.ENDC)
 
     elif link["website"] == "adidas" and link["currencyId"] == 2:
         adiheaders = {
@@ -672,9 +687,11 @@ def df_loops(link):
             if TYPE == "update":
                 disableProduct(link["productId"])
                 f.write(str(link["link"]) + "\n")
+            print(bcolors.FAIL)
             print(link["link"])
             print(e)
             print("**")
+            print(bcolors.ENDC)
 
     elif link["website"] == "puma":
         headers = {
@@ -752,10 +769,12 @@ def df_loops(link):
             if TYPE == "update":
                 disableProduct(link["productId"])
                 f.write(str(link["link"]) + "\n")
+            print(bcolors.FAIL)
             print("puma")
-            print(link)
+            print(link["link"])
             print(e)
             print("**")
+            print(bcolors.ENDC)
 
     elif link["website"] == "asics":
         headers = {
@@ -825,10 +844,12 @@ def df_loops(link):
             if TYPE == "update":
                 disableProduct(link["productId"])
                 f.write(str(link["link"]) + "\n")
+            print(bcolors.FAIL)
             print("asics")
-            print(link)
+            print(link["link"])
             print(e)
             print("**")
+            print(bcolors.ENDC)
 
     elif link["website"] == "salomon":
         headers = {
@@ -893,10 +914,12 @@ def df_loops(link):
             if TYPE == "update":
                 disableProduct(link["productId"])
                 f.write(str(link["link"]) + "\n")
+            print(bcolors.FAIL)
             print("salomon")
-            print(link)
+            print(link["link"])
             print(e)
             print("**")
+            print(bcolors.ENDC)
 
     elif link["website"] == "mizuno":
         headers = {
@@ -958,10 +981,11 @@ def df_loops(link):
             if TYPE == "update":
                 disableProduct(link["productId"])
                 f.write(str(link["link"]) + "\n")
-            print("salomon")
-            print(link)
+            print(bcolors.FAIL)
+            print(link["link"])
             print(e)
             print("**")
+            print(bcolors.ENDC)
 
     elif link["website"] == "timberland":
         headers = {
@@ -1029,10 +1053,12 @@ def df_loops(link):
             if TYPE == "update":
                 disableProduct(link["productId"])
                 f.write(str(link["link"]) + "\n")
+            print(bcolors.FAIL)
             print("timberland error")
-            print(link)
+            print(link["link"])
             print(e)
             print("**")
+            print(bcolors.ENDC)
     elif link["website"] == "pull and bear":
         try:
             print("\n\n******** PULL & BEAR *********\n\n")
